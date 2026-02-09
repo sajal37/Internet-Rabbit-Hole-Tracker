@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Rabbit Hole Settings</title>
+    <link rel="stylesheet" href="dashboard.css" />
+    <link rel="stylesheet" href="settings.css" />
+  </head>
+  <body class="settings-page">
+    <div class="backdrop"></div>
+    <div class="grain"></div>
+    <div class="app">
+      <header class="top-bar">
+        <div class="brand">
+          <span class="eyebrow">Rabbit Hole Tracker</span>
+          <h1>Settings Studio</h1>
+          <p class="tagline">Tune the tracker, the tone, and the look you live with.</p>
+        </div>
+        <div class="top-actions">
+          <button type="button" class="ghost" id="open-dashboard">Open dashboard</button>
+        </div>
+      </header>
+
+      <main class="settings-grid">
+        <aside class="settings-sidebar">
+          <nav class="settings-nav" aria-label="Settings categories">
+            <span class="settings-nav-title">Categories</span>
+            <a href="settings.html" class="active">Popup</a>
+            <a href="settings-dashboard.html">Dashboard</a>
+            <a href="settings-personalization.html">Personalization</a>
+            <a href="settings-technical.html">Technical</a>
+          </nav>
+        </aside>
+        <form class="settings-form" id="settings-form">
+          <section class="settings-group" id="popup-studio">
+            <header class="group-header">
+              <h2>Popup Studio</h2>
+              <p>Design the micro-dashboard that opens with one click.</p>
+            </header>
+            <label class="field">
+              <span class="field-label">
+                <span>Popup layout style</span>
+                <button type="button" class="help-icon" data-help="Choose how stats are arranged inside the popup.">?</button>
+              </span>
+              <select id="setting-popup-layout">
+                <option value="stack">Stats stack</option>
+                <option value="cards">Mini cards</option>
+                <option value="focus">Focus bar</option>
+              </select>
+            </label>
+            <div class="field-grid">
+              <label class="field toggle">
+                <input type="checkbox" id="setting-popup-show-active-time" />
+                <span class="field-label">
+                  <span>Active time</span>
+                  <button type="button" class="help-icon" data-help="Show total active time in the popup.">?</button>
+                </span>
+              </label>
+              <label class="field toggle">
+                <input type="checkbox" id="setting-popup-show-top-domain" />
+                <span class="field-label">
+                  <span>Top domain</span>
+                  <button type="button" class="help-icon" data-help="Show the most visited domain in the popup.">?</button>
+                </span>
+              </label>
+              <label class="field toggle">
+                <input type="checkbox" id="setting-popup-show-distraction" />
+                <span class="field-label">
+                  <span>Distraction score</span>
+                  <button type="button" class="help-icon" data-help="Show the distraction score for this session.">?</button>
+                </span>
+              </label>
+              <label class="field toggle">
+                <input type="checkbox" id="setting-popup-show-session-label" />
+                <span class="field-label">
+                  <span>Session label</span>
+                  <button type="button" class="help-icon" data-help="Show the session label in the popup.">?</button>
+                </span>
+              </label>
+              <label class="field toggle">
+                <input type="checkbox" id="setting-popup-show-last-action" />
+                <span class="field-label">
+                  <span>Last action</span>
+                  <button type="button" class="help-icon" data-help="Show the most recent tracked action.">?</button>
+                </span>
+              </label>
+            </div>
+            <label class="field">
+              <span class="field-label">
+                <span>One-tap action</span>
+                <button type="button" class="help-icon" data-help="Select the quick action button for the popup.">?</button>
+              </span>
+              <select id="setting-popup-action">
+                <option value="open_dashboard">Open dashboard</option>
+                <option value="pause_tracking">Pause tracking</option>
+                <option value="copy_summary">Copy summary</option>
+                <option value="start_focus">Start focus</option>
+              </select>
+            </label>
+            <label class="field">
+              <span class="field-label">
+                <span>Popup subtitle</span>
+                <button type="button" class="help-icon" data-help="Short line shown under the title.">?</button>
+              </span>
+              <textarea id="setting-popup-note" rows="2" placeholder="Quick reminder for future you..."></textarea>
+            </label>
+            <label class="field">
+              <span class="field-label">
+                <span>Micro note</span>
+                <button type="button" class="help-icon" data-help="Tiny note shown above the buttons.">?</button>
+              </span>
+              <textarea id="setting-popup-micro-note" rows="2" placeholder="One tiny nudge..."></textarea>
+            </label>
+            <div class="field-row">
+              <label class="field">
+                <span class="field-label">
+                  <span>Mood chip</span>
+                  <button type="button" class="help-icon" data-help="Small emoji or badge shown in the header.">?</button>
+                </span>
+                <input type="text" id="setting-popup-mood" placeholder="✨" />
+              </label>
+              <label class="field">
+                <span class="field-label">
+                  <span>Popup density</span>
+                  <button type="button" class="help-icon" data-help="Controls spacing in the popup.">?</button>
+                </span>
+                <select id="setting-popup-density">
+                  <option value="roomy">Roomy</option>
+                  <option value="compact">Compact</option>
+                </select>
+              </label>
+            </div>
+            <label class="field">
+              <span class="field-label">
+                <span>Open dashboard label</span>
+                <button type="button" class="help-icon" data-help="Used when the one-tap action is Open dashboard.">?</button>
+              </span>
+              <input type="text" id="setting-dashboard-button-label" placeholder="Open dashboard" />
+            </label>
+          </section>
+
+          <div class="settings-actions">
+            <button type="button" class="ghost undo-pill" id="undo-settings">Undo last change</button>
+            <button type="button" class="ghost danger" id="reset-settings">Reset to defaults</button>
+            <span class="settings-status" id="settings-status"></span>
+          </div>
+        </form>
+      </main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite">
+      <span id="toast-message"></span>
+      <button type="button" id="toast-action" hidden>Undo</button>
+    </div>
+    <script src="../categories.js"></script>
+    <script src="../shared.js"></script>
+    <script src="../insights.js"></script>
+    <script src="dashboard.js"></script>
+  </body>
+</html>

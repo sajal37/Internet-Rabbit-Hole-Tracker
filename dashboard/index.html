@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Rabbit Hole Dashboard</title>
+    <link rel="stylesheet" href="dashboard.css" />
+  </head>
+  <body class="dashboard-page">
+    <div class="backdrop"></div>
+    <div class="grain"></div>
+    <div class="app">
+      <header class="top-bar">
+        <div class="brand">
+          <span class="eyebrow">Rabbit Hole Tracker</span>
+          <h1>Attention Atlas</h1>
+          <p class="tagline">A calm reflection on how the last session unfolded.</p>
+        </div>
+        <div class="top-actions">
+          <div class="live-indicator" id="live-indicator">
+            <span class="dot" aria-hidden="true"></span>
+            <span id="live-label">Live data</span>
+          </div>
+          <div class="action-row">
+            <button type="button" class="primary" id="summary-refresh">Refresh summaries</button>
+            <button type="button" class="ghost" id="open-settings">Settings</button>
+          </div>
+          <span class="summary-status" id="summary-status"></span>
+        </div>
+      </header>
+
+      <main class="dashboard-grid">
+        <section class="panel summary-card" hidden>
+          <header class="panel-header">
+            <h2>Brief summary</h2>
+            <p>A short mirror for the latest trail.</p>
+          </header>
+          <p class="summary-text" id="brief-summary">No session yet.</p>
+          <p class="focus-note" id="focus-note" hidden></p>
+        </section>
+
+        <section class="panel detail-card">
+          <header class="panel-header">
+            <h2>Full reflection</h2>
+            <p>Deeper notes about the thread you followed.</p>
+          </header>
+          <p class="summary-text" id="detailed-summary">No detailed summary yet.</p>
+        </section>
+
+        <aside class="panel session-panel">
+          <header class="panel-header">
+            <h2>Sessions</h2>
+            <p>Pick a previous trail to revisit.</p>
+          </header>
+          <div class="session-controls">
+            <div class="action-row session-actions">
+              <button type="button" class="ghost danger" id="session-delete" hidden>Delete</button>
+            </div>
+            <div class="session-filters">
+              <label class="session-toggle" id="session-favorites-toggle">
+                <input type="checkbox" id="session-filter-favorites" />
+                <span>Favorites only</span>
+              </label>
+            </div>
+            <label class="session-toggle session-toggle--date" id="session-calendar">
+              <span>Pick date</span>
+              <input type="date" id="session-date-picker" aria-label="Pick date (local format)" />
+            </label>
+          </div>
+          <div class="session-list" id="session-list" tabindex="0" role="listbox" aria-label="Sessions"></div>
+          <p class="empty" id="session-list-empty">No sessions yet.</p>
+        </aside>
+      </main>
+
+      <section class="panel overview-panel" id="overview-panel">
+        <header class="panel-header">
+          <h2>Overview highlights</h2>
+          <p>Signals and next moves pulled from this session.</p>
+        </header>
+        <div class="overview-grid">
+          <div class="overview-block">
+            <h3>Mirror</h3>
+            <p class="overview-summary" id="overview-summary">Session summary unavailable.</p>
+            <p class="overview-origin" id="overview-origin"></p>
+          </div>
+          <div class="overview-block">
+            <h3>Insights</h3>
+            <ul class="overview-list" id="overview-insights"></ul>
+            <p class="empty" id="overview-insights-empty">No insights yet.</p>
+          </div>
+          <div class="overview-block">
+            <h3>Actions</h3>
+            <div class="overview-actions" id="overview-actions"></div>
+            <p class="empty" id="overview-actions-empty">No actions yet.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel deep-dive" id="deep-dive">
+        <header class="panel-header">
+          <h2>Deep dive</h2>
+          <p>Trace the timeline, the graph, and the honest moments.</p>
+        </header>
+        <div class="deep-tabs" role="tablist" aria-label="Deep dive views">
+          <button type="button" class="deep-tab active" data-deep="timeline" id="deep-tab-timeline" role="tab" aria-selected="true" aria-controls="deep-panel-timeline" tabindex="0">
+            Timeline
+          </button>
+          <button type="button" class="deep-tab" data-deep="graph" id="deep-tab-graph" role="tab" aria-selected="false" aria-controls="deep-panel-graph" tabindex="-1">
+            Graph
+          </button>
+          <button type="button" class="deep-tab" data-deep="stats" id="deep-tab-stats" role="tab" aria-selected="false" aria-controls="deep-panel-stats" tabindex="-1">
+            Stats
+          </button>
+          <button type="button" class="deep-tab" data-deep="honest" id="deep-tab-honest" role="tab" aria-selected="false" aria-controls="deep-panel-honest" tabindex="-1">
+            Honesty
+          </button>
+        </div>
+        <div class="deep-panels">
+          <div class="deep-panel" data-deep-panel="timeline" id="deep-panel-timeline" role="tabpanel" aria-labelledby="deep-tab-timeline">
+            <div class="timeline-meta">
+              <div>
+                <span>Start</span>
+                <strong id="timeline-start">-</strong>
+              </div>
+              <div>
+                <span>End</span>
+                <strong id="timeline-end">-</strong>
+              </div>
+            </div>
+            <div class="timeline-track" id="timeline-track"></div>
+            <div class="timeline-legend" id="timeline-legend"></div>
+          </div>
+          <div class="deep-panel" data-deep-panel="graph" id="deep-panel-graph" role="tabpanel" aria-labelledby="deep-tab-graph" hidden>
+            <div class="graph-controls">
+              <div class="graph-control-group">
+                <button type="button" class="graph-toggle active" data-mode="domain">
+                  By domain
+                </button>
+                <button type="button" class="graph-toggle" data-mode="page">
+                  By page
+                </button>
+              </div>
+              <div class="graph-control-group graph-control-group--filters">
+                <label class="graph-field">
+                  <span>Search</span>
+                  <input type="search" id="graph-search" placeholder="Filter nodes..." />
+                </label>
+                <label class="graph-field">
+                  <span>Node cap</span>
+                  <input type="range" id="graph-node-cap" min="20" max="200" step="5" />
+                  <strong id="graph-node-cap-value">80</strong>
+                </label>
+                <label class="graph-field">
+                  <span>Min active</span>
+                  <input type="range" id="graph-min-active" min="0" max="30" step="1" />
+                  <strong id="graph-min-active-value">0m</strong>
+                </label>
+                <label class="graph-field">
+                  <span>Min edge</span>
+                  <input type="range" id="graph-min-edge" min="1" max="8" step="1" />
+                  <strong id="graph-min-edge-value">1</strong>
+                </label>
+                <label class="graph-field">
+                  <span>Color by</span>
+                  <select id="graph-color-by">
+                    <option value="activity">Activity</option>
+                    <option value="category">Category</option>
+                    <option value="domain">Domain</option>
+                  </select>
+                </label>
+                <label class="graph-toggle-inline">
+                  <input type="checkbox" id="graph-show-labels" checked />
+                  <span>Show labels</span>
+                </label>
+                <label class="graph-toggle-inline">
+                  <input type="checkbox" id="graph-hide-isolates" />
+                  <span>Hide isolates</span>
+                </label>
+                <label class="graph-toggle-inline">
+                  <input type="checkbox" id="graph-freeze" />
+                  <span>Freeze layout</span>
+                </label>
+                <button type="button" class="ghost" id="graph-reset">Reset view</button>
+              </div>
+            </div>
+            <div class="graph-meta">
+              <div class="graph-stats" id="graph-stats"></div>
+              <div class="graph-legend" id="graph-legend"></div>
+            </div>
+            <div class="graph-wrap">
+              <canvas id="graph-canvas"></canvas>
+              <div id="graph-empty" class="graph-empty">No graph yet.</div>
+            </div>
+            <div id="graph-tooltip" class="graph-tooltip" aria-hidden="true"></div>
+          </div>
+          <div class="deep-panel" data-deep-panel="stats" id="deep-panel-stats" role="tabpanel" aria-labelledby="deep-tab-stats" hidden>
+            <div class="stats-grid">
+              <div class="stat-card">
+                <span>Session range</span>
+                <strong id="session-range">-</strong>
+              </div>
+              <div class="stat-card">
+                <span>Active time</span>
+                <strong id="total-active">-</strong>
+              </div>
+              <div class="stat-card">
+                <span>Pages touched</span>
+                <strong id="page-count">-</strong>
+              </div>
+              <div class="stat-card">
+                <span>Navigation edges</span>
+                <strong id="edge-count">-</strong>
+              </div>
+            </div>
+            <div class="stats-grid stats-grid-wide">
+              <div class="stat-card">
+                <span>Deepest chain</span>
+                <strong id="deepest-chain">-</strong>
+                <p class="stat-detail" id="deepest-chain-detail"></p>
+              </div>
+              <div class="stat-card">
+                <span>Common start (all sessions)</span>
+                <strong id="common-start">-</strong>
+                <p class="stat-detail" id="common-start-detail"></p>
+              </div>
+              <div class="stat-card">
+                <span>Trap door</span>
+                <strong id="trap-door">-</strong>
+                <p class="stat-detail" id="trap-door-detail"></p>
+              </div>
+              <div class="stat-card">
+                <span>Session label</span>
+                <strong id="session-label">-</strong>
+                <p class="stat-detail" id="session-label-detail"></p>
+              </div>
+            </div>
+            <div class="rank-grid">
+              <div class="rank-block">
+                <h3>Top domains</h3>
+                <ol id="top-domains" data-limit="3" data-collapsed="true"></ol>
+                <button type="button" class="rank-toggle" data-target="top-domains">Show all</button>
+              </div>
+              <div class="rank-block">
+                <h3>Top pages</h3>
+                <ol id="top-pages" data-limit="3" data-collapsed="true"></ol>
+                <button type="button" class="rank-toggle" data-target="top-pages">Show all</button>
+              </div>
+              <div class="rank-block">
+                <h3>Top distractions</h3>
+                <ol id="top-distractions" data-limit="3" data-collapsed="true"></ol>
+                <button type="button" class="rank-toggle" data-target="top-distractions">Show all</button>
+              </div>
+            </div>
+          </div>
+          <div class="deep-panel" data-deep-panel="honest" id="deep-panel-honest" role="tabpanel" aria-labelledby="deep-tab-honest" hidden>
+            <div class="honesty-grid">
+              <div class="honesty-block">
+                <h3>Damage receipts</h3>
+                <ol id="damage-receipts"></ol>
+              </div>
+              <div class="honesty-block">
+                <h3>Return path</h3>
+                <div class="path-grid">
+                  <div>
+                    <span>Start</span>
+                    <strong id="path-start">-</strong>
+                  </div>
+                  <div>
+                    <span>Trap door</span>
+                    <strong id="path-trap">-</strong>
+                  </div>
+                  <div>
+                    <span>End</span>
+                    <strong id="path-end">-</strong>
+                  </div>
+                </div>
+                <p class="path-meta" id="path-meta"></p>
+              </div>
+              <div class="honesty-block">
+                <h3>Callouts</h3>
+                <ul id="callouts-list"></ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite">
+      <span id="toast-message"></span>
+      <button type="button" id="toast-action" hidden>Undo</button>
+    </div>
+    <script src="../categories.js"></script>
+    <script src="../shared.js"></script>
+    <script src="../insights.js"></script>
+    <script src="summary-shared.js"></script>
+    <script src="dashboard.js"></script>
+  </body>
+</html>

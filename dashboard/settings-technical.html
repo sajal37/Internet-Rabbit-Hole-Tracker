@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Rabbit Hole Settings</title>
+    <link rel="stylesheet" href="dashboard.css" />
+    <link rel="stylesheet" href="settings.css" />
+  </head>
+  <body class="settings-page">
+    <div class="backdrop"></div>
+    <div class="grain"></div>
+    <div class="app">
+      <header class="top-bar">
+        <div class="brand">
+          <span class="eyebrow">Rabbit Hole Tracker</span>
+          <h1>Settings Studio</h1>
+          <p class="tagline">Tune the tracker, the tone, and the look you live with.</p>
+        </div>
+        <div class="top-actions">
+          <button type="button" class="ghost" id="open-dashboard">Open dashboard</button>
+        </div>
+      </header>
+
+      <main class="settings-grid">
+        <aside class="settings-sidebar">
+          <nav class="settings-nav" aria-label="Settings categories">
+            <span class="settings-nav-title">Categories</span>
+            <a href="settings.html">Popup</a>
+            <a href="settings-dashboard.html">Dashboard</a>
+            <a href="settings-personalization.html">Personalization</a>
+            <a href="settings-technical.html" class="active">Technical</a>
+          </nav>
+        </aside>
+        <form class="settings-form" id="settings-form">
+          <section class="settings-group" id="focus-productivity">
+            <header class="group-header">
+              <h2>Focus &amp; Productivity</h2>
+              <p>Set your guardrails for sessions and site intent.</p>
+            </header>
+            <label class="field toggle">
+              <input type="checkbox" id="setting-tracking-paused" />
+              <span class="field-label">
+                <span>Pause tracking</span>
+                <button type="button" class="help-icon" data-help="Stop collecting activity temporarily.">?</button>
+              </span>
+            </label>
+            <details class="settings-accordion">
+              <summary>Timers &amp; session endings</summary>
+              <div class="accordion-body">
+                <label class="field">
+                  <span class="field-label">
+                    <span>End the session after quiet minutes</span>
+                    <button type="button" class="help-icon" data-help="Auto-end session after inactivity.">?</button>
+                  </span>
+                  <input type="number" id="setting-session-timeout" min="3" max="120" step="1" />
+                </label>
+                <label class="field">
+                  <span class="field-label">
+                    <span>Mark me idle after quiet minutes</span>
+                    <button type="button" class="help-icon" data-help="Idle threshold for inactivity.">?</button>
+                  </span>
+                  <input type="number" id="setting-idle-timeout" min="1" max="30" step="1" />
+                </label>
+              </div>
+            </details>
+            <label class="field">
+              <span class="field-label">
+                <span>Helpful sites</span>
+                <button type="button" class="help-icon" data-help="Domains treated as productive.">?</button>
+              </span>
+              <textarea id="setting-productive-sites" rows="4" placeholder="docs.example.com&#10;mail.example.com"></textarea>
+            </label>
+            <label class="field">
+              <span class="field-label">
+                <span>Sites that pull me away</span>
+                <button type="button" class="help-icon" data-help="Domains treated as distracting.">?</button>
+              </span>
+              <textarea id="setting-distracting-sites" rows="4" placeholder="video.example.com&#10;social.example.com"></textarea>
+            </label>
+            <label class="field">
+              <span class="field-label">
+                <span>Custom labels for sites</span>
+                <button type="button" class="help-icon" data-help="Map domains to categories.">?</button>
+              </span>
+              <textarea id="setting-category-overrides" rows="4" placeholder="youtube.com=Video&#10;news.ycombinator.com=Study"></textarea>
+            </label>
+          </section>
+
+          <section class="settings-group" id="advanced">
+            <header class="group-header">
+              <h2>Advanced</h2>
+              <p>Sync, summaries, and AI knobs tucked away.</p>
+            </header>
+            <details class="settings-accordion">
+              <summary>Sync + AI endpoints</summary>
+              <div class="accordion-body">
+                <label class="field toggle">
+                  <input type="checkbox" id="setting-sync" />
+                  <span class="field-label">
+                    <span>Keep sessions across devices</span>
+                    <button type="button" class="help-icon" data-help="Sync session data across devices.">?</button>
+                  </span>
+                </label>
+                <label class="field">
+                  <span class="field-label">
+                    <span>Ollama endpoint</span>
+                    <button type="button" class="help-icon" data-help="URL of the Ollama analysis service.">?</button>
+                  </span>
+                  <input type="text" id="setting-ollama-endpoint" placeholder="http://localhost:3010/analyze" />
+                </label>
+                <label class="field">
+                  <span class="field-label">
+                    <span>Ollama model</span>
+                    <button type="button" class="help-icon" data-help="Model name to query at the endpoint.">?</button>
+                  </span>
+                  <input type="text" id="setting-ollama-model" placeholder="gpt-oss:120b-cloud" />
+                </label>
+              </div>
+            </details>
+            <details class="settings-accordion">
+              <summary>Summary refresh controls</summary>
+              <div class="accordion-body">
+                <label class="field toggle">
+                  <input type="checkbox" id="setting-summary-auto-refresh" />
+                  <span class="field-label">
+                    <span>Auto-refresh summaries on open</span>
+                    <button type="button" class="help-icon" data-help="Refresh summaries when opening.">?</button>
+                  </span>
+                </label>
+                <div class="field-row">
+                  <label class="field">
+                    <span class="field-label">
+                      <span>Summary refresh cooldown (minutes)</span>
+                      <button type="button" class="help-icon" data-help="Minimum minutes between refreshes.">?</button>
+                    </span>
+                    <input type="number" id="setting-summary-cooldown" min="0" max="120" step="1" />
+                  </label>
+                  <label class="field">
+                    <span class="field-label">
+                      <span>Summary cache duration (minutes)</span>
+                      <button type="button" class="help-icon" data-help="Reuse cached summaries for this long.">?</button>
+                    </span>
+                    <input type="number" id="setting-summary-cache" min="0" max="1440" step="5" />
+                  </label>
+                </div>
+              </div>
+            </details>
+            <details class="settings-accordion">
+              <summary>Real-time performance</summary>
+              <div class="accordion-body">
+                <label class="field toggle">
+                  <input type="checkbox" id="setting-realtime-stream" />
+                  <span class="field-label">
+                    <span>Stream live updates</span>
+                    <button type="button" class="help-icon" data-help="Use a long-lived connection for live dashboard updates.">?</button>
+                  </span>
+                </label>
+                <label class="field toggle">
+                  <input type="checkbox" id="setting-realtime-push" />
+                  <span class="field-label">
+                    <span>Push updates from background</span>
+                    <button type="button" class="help-icon" data-help="Background pushes updates to the dashboard without polling.">?</button>
+                  </span>
+                </label>
+                <label class="field toggle">
+                  <input type="checkbox" id="setting-realtime-delta" />
+                  <span class="field-label">
+                    <span>Incremental state sync</span>
+                    <button type="button" class="help-icon" data-help="Send only state deltas instead of full snapshots.">?</button>
+                  </span>
+                </label>
+                <label class="field toggle">
+                  <input type="checkbox" id="setting-realtime-live-timers" />
+                  <span class="field-label">
+                    <span>Live timers without full refresh</span>
+                    <button type="button" class="help-icon" data-help="Tick active time in-memory instead of full re-render.">?</button>
+                  </span>
+                </label>
+                <label class="field toggle">
+                  <input type="checkbox" id="setting-realtime-batching" />
+                  <span class="field-label">
+                    <span>Batch UI updates</span>
+                    <button type="button" class="help-icon" data-help="Batch updates into a short window (250-500ms).">?</button>
+                  </span>
+                </label>
+                <label class="field">
+                  <span class="field-label">
+                    <span>Batch window (ms)</span>
+                    <button type="button" class="help-icon" data-help="How long to batch live updates before pushing to the UI.">?</button>
+                  </span>
+                  <input type="number" id="setting-realtime-batch-window" min="250" max="500" step="10" />
+                </label>
+                <label class="field toggle">
+                  <input type="checkbox" id="setting-realtime-priority" />
+                  <span class="field-label">
+                    <span>Priority updates first</span>
+                    <button type="button" class="help-icon" data-help="Update key stats first, defer heavy charts.">?</button>
+                  </span>
+                </label>
+                <label class="field toggle">
+                  <input type="checkbox" id="setting-realtime-optimistic" />
+                  <span class="field-label">
+                    <span>Optimistic UI actions</span>
+                    <button type="button" class="help-icon" data-help="Reflect favorite/delete actions immediately.">?</button>
+                  </span>
+                </label>
+                <label class="field toggle">
+                  <input type="checkbox" id="setting-realtime-worker" />
+                  <span class="field-label">
+                    <span>Offload heavy work to worker</span>
+                    <button type="button" class="help-icon" data-help="Move graph/summary computations off the main thread.">?</button>
+                  </span>
+                </label>
+                <label class="field toggle">
+                  <input type="checkbox" id="setting-realtime-raf" />
+                  <span class="field-label">
+                    <span>Frame-aligned rendering</span>
+                    <button type="button" class="help-icon" data-help="Align chart updates to animation frames.">?</button>
+                  </span>
+                </label>
+              </div>
+            </details>
+            <div class="subgroup">
+              <h3>Data tools</h3>
+              <div class="action-row">
+                <button type="button" class="ghost" id="export-data">Export sessions</button>
+                <button type="button" class="ghost danger" id="delete-all-sessions">Delete all sessions</button>
+                <button type="button" class="ghost danger" id="reset-state">Reset tracker</button>
+              </div>
+            </div>
+          </section>
+
+          <div class="settings-actions">
+            <button type="button" class="ghost undo-pill" id="undo-settings">Undo last change</button>
+            <button type="button" class="ghost danger" id="reset-settings">Reset to defaults</button>
+            <span class="settings-status" id="settings-status"></span>
+          </div>
+        </form>
+      </main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite">
+      <span id="toast-message"></span>
+      <button type="button" id="toast-action" hidden>Undo</button>
+    </div>
+    <script src="../categories.js"></script>
+    <script src="../shared.js"></script>
+    <script src="../insights.js"></script>
+    <script src="dashboard.js"></script>
+  </body>
+</html>

@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "Internet Rabbit Hole Tracker",
+  "version": "0.1.0",
+  "description": "Tracks active browsing time and navigation chains.",
+  "permissions": [
+    "tabs",
+    "windows",
+    "storage",
+    "webNavigation",
+    "idle",
+    "alarms"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*",
+    "http://localhost:3010/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "options_ui": {
+    "page": "dashboard/settings.html",
+    "open_in_tab": true
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "Rabbit Hole Tracker",
+    "default_popup": "popup.html"
+  }
+}

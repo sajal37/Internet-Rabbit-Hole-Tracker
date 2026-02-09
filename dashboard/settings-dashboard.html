@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Rabbit Hole Settings</title>
+    <link rel="stylesheet" href="dashboard.css" />
+    <link rel="stylesheet" href="settings.css" />
+  </head>
+  <body class="settings-page">
+    <div class="backdrop"></div>
+    <div class="grain"></div>
+    <div class="app">
+      <header class="top-bar">
+        <div class="brand">
+          <span class="eyebrow">Rabbit Hole Tracker</span>
+          <h1>Settings Studio</h1>
+          <p class="tagline">Tune the tracker, the tone, and the look you live with.</p>
+        </div>
+        <div class="top-actions">
+          <button type="button" class="ghost" id="open-dashboard">Open dashboard</button>
+        </div>
+      </header>
+
+      <main class="settings-grid">
+        <aside class="settings-sidebar">
+          <nav class="settings-nav" aria-label="Settings categories">
+            <span class="settings-nav-title">Categories</span>
+            <a href="settings.html">Popup</a>
+            <a href="settings-dashboard.html" class="active">Dashboard</a>
+            <a href="settings-personalization.html">Personalization</a>
+            <a href="settings-technical.html">Technical</a>
+          </nav>
+        </aside>
+        <form class="settings-form" id="settings-form">
+          <section class="settings-group" id="dashboard-studio">
+            <header class="group-header">
+              <h2>Dashboard Studio</h2>
+              <p>Curate what appears on the main dashboard canvas.</p>
+            </header>
+            <div class="field-grid">
+              <label class="field toggle">
+                <input type="checkbox" id="setting-dashboard-show-overview" />
+                <span class="field-label">
+                  <span>Overview</span>
+                  <button type="button" class="help-icon" data-help="Show the detailed reflection and overview panels.">?</button>
+                </span>
+              </label>
+              <label class="field toggle">
+                <input type="checkbox" id="setting-dashboard-show-sessions" />
+                <span class="field-label">
+                  <span>Sessions</span>
+                  <button type="button" class="help-icon" data-help="Show the sessions list panel.">?</button>
+                </span>
+              </label>
+              <label class="field toggle">
+                <input type="checkbox" id="setting-dashboard-show-timeline" />
+                <span class="field-label">
+                  <span>Timeline</span>
+                  <button type="button" class="help-icon" data-help="Show the Timeline tab in Deep dive.">?</button>
+                </span>
+              </label>
+              <label class="field toggle">
+                <input type="checkbox" id="setting-dashboard-show-graph" />
+                <span class="field-label">
+                  <span>Graph</span>
+                  <button type="button" class="help-icon" data-help="Show the Graph tab in Deep dive.">?</button>
+                </span>
+              </label>
+              <label class="field toggle">
+                <input type="checkbox" id="setting-dashboard-show-stats" />
+                <span class="field-label">
+                  <span>Stats</span>
+                  <button type="button" class="help-icon" data-help="Show the Stats tab in Deep dive.">?</button>
+                </span>
+              </label>
+              <label class="field toggle">
+                <input type="checkbox" id="setting-dashboard-show-honesty" />
+                <span class="field-label">
+                  <span>Honesty</span>
+                  <button type="button" class="help-icon" data-help="Show the Honesty tab in Deep dive.">?</button>
+                </span>
+              </label>
+              <label class="field toggle">
+                <input type="checkbox" id="setting-dashboard-show-callouts" />
+                <span class="field-label">
+                  <span>Callouts</span>
+                  <button type="button" class="help-icon" data-help="Show callout messages inside the Honesty tab.">?</button>
+                </span>
+              </label>
+            </div>
+            <label class="field toggle">
+              <input type="checkbox" id="setting-dashboard-story-mode" />
+              <span class="field-label">
+                <span>Story mode layout</span>
+                <button type="button" class="help-icon" data-help="Reflow summary and sessions layout.">?</button>
+              </span>
+            </label>
+            <label class="field">
+              <span class="field-label">
+                <span>Session list style</span>
+                <button type="button" class="help-icon" data-help="Visual style for the session list.">?</button>
+              </span>
+              <select id="setting-session-list-style">
+                <option value="cards">Cards</option>
+                <option value="list">List</option>
+                <option value="minimal">Minimal</option>
+              </select>
+            </label>
+            <label class="field toggle">
+              <input type="checkbox" id="setting-pin-active-session" />
+              <span class="field-label">
+                <span>Pin current session on top</span>
+                <button type="button" class="help-icon" data-help="Keep the active session pinned to the top.">?</button>
+              </span>
+            </label>
+            <label class="field">
+              <span class="field-label">
+                <span>Session list size</span>
+                <button type="button" class="help-icon" data-help="Max number of sessions shown.">?</button>
+              </span>
+              <input type="number" id="setting-session-list-limit" min="3" max="40" step="1" />
+            </label>
+            <label class="field">
+              <span class="field-label">
+                <span>Dashboard focus note</span>
+                <button type="button" class="help-icon" data-help="Custom note shown under the brief summary (when enabled).">?</button>
+              </span>
+              <textarea id="setting-dashboard-note" rows="3" placeholder="My intention for this session..."></textarea>
+            </label>
+            <label class="field">
+              <span class="field-label">
+                <span>Focus prompt rotation</span>
+                <button type="button" class="help-icon" data-help="Fallback prompts when focus note is empty.">?</button>
+              </span>
+              <textarea id="setting-focus-prompts" rows="3" placeholder="Stay intentional&#10;Breathe before the next click"></textarea>
+            </label>
+            <label class="field toggle">
+              <input type="checkbox" id="setting-outcome-highlights" />
+              <span class="field-label">
+                <span>Show outcome highlights</span>
+                <button type="button" class="help-icon" data-help="Add comparisons to the insights list.">?</button>
+              </span>
+            </label>
+          </section>
+
+          <div class="settings-actions">
+            <button type="button" class="ghost undo-pill" id="undo-settings">Undo last change</button>
+            <button type="button" class="ghost danger" id="reset-settings">Reset to defaults</button>
+            <span class="settings-status" id="settings-status"></span>
+          </div>
+        </form>
+      </main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite">
+      <span id="toast-message"></span>
+      <button type="button" id="toast-action" hidden>Undo</button>
+    </div>
+    <script src="../categories.js"></script>
+    <script src="../shared.js"></script>
+    <script src="../insights.js"></script>
+    <script src="dashboard.js"></script>
+  </body>
+</html>

@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Rabbit Hole Settings</title>
+    <link rel="stylesheet" href="dashboard.css" />
+    <link rel="stylesheet" href="settings.css" />
+  </head>
+  <body class="settings-page">
+    <div class="backdrop"></div>
+    <div class="grain"></div>
+    <div class="app">
+      <header class="top-bar">
+        <div class="brand">
+          <span class="eyebrow">Rabbit Hole Tracker</span>
+          <h1>Settings Studio</h1>
+          <p class="tagline">Tune the tracker, the tone, and the look you live with.</p>
+        </div>
+        <div class="top-actions">
+          <button type="button" class="ghost" id="open-dashboard">Open dashboard</button>
+        </div>
+      </header>
+
+      <main class="settings-grid">
+        <aside class="settings-sidebar">
+          <nav class="settings-nav" aria-label="Settings categories">
+            <span class="settings-nav-title">Categories</span>
+            <a href="settings.html">Popup</a>
+            <a href="settings-dashboard.html">Dashboard</a>
+            <a href="settings-personalization.html" class="active">Personalization</a>
+            <a href="settings-technical.html">Technical</a>
+          </nav>
+        </aside>
+        <form class="settings-form" id="settings-form">
+          <section class="settings-group" id="appearance">
+            <header class="group-header">
+              <h2>Appearance</h2>
+              <p>Set the mood of the dashboard and popup at a glance.</p>
+            </header>
+            <label class="field">
+              <span class="field-label">
+                <span>Color mood</span>
+                <button type="button" class="help-icon" data-help="Overall theme of the dashboard.">?</button>
+              </span>
+              <select id="setting-theme">
+                <option value="warm">Warm</option>
+                <option value="ink">Ink</option>
+                <option value="forest">Forest</option>
+                <option value="retro">Retro</option>
+                <option value="paper">Paper</option>
+                <option value="noir">Noir</option>
+              </select>
+            </label>
+            <label class="field">
+              <span class="field-label">
+                <span>Accent color</span>
+                <button type="button" class="help-icon" data-help="Accent color used for buttons and highlights.">?</button>
+              </span>
+              <input type="color" id="setting-accent-color" value="#d66a3d" />
+            </label>
+            <label class="field">
+              <span class="field-label">
+                <span>Typography style</span>
+                <button type="button" class="help-icon" data-help="Choose type styling.">?</button>
+              </span>
+              <select id="setting-typography-style">
+                <option value="calm">Calm</option>
+                <option value="bold">Bold</option>
+                <option value="technical">Technical</option>
+              </select>
+            </label>
+            <label class="field">
+              <span class="field-label">
+                <span>Interface density</span>
+                <button type="button" class="help-icon" data-help="Overall spacing in the dashboard.">?</button>
+              </span>
+              <select id="setting-ui-density">
+                <option value="comfortable">Comfortable</option>
+                <option value="compact">Compact</option>
+              </select>
+            </label>
+            <label class="field toggle">
+              <input type="checkbox" id="setting-reduce-motion" />
+              <span class="field-label">
+                <span>Reduce motion</span>
+                <button type="button" class="help-icon" data-help="Turn off motion effects.">?</button>
+              </span>
+            </label>
+            <div class="preview-panel" id="settings-preview">
+              <div class="preview-card">
+                <div class="preview-title">Dashboard preview</div>
+                <div class="preview-metric">
+                  <span>Active time</span>
+                  <strong>1h 24m</strong>
+                </div>
+                <div class="preview-chips">
+                  <span class="preview-chip" id="preview-theme-label">Warm</span>
+                  <span class="preview-chip" id="preview-density-label">Comfortable</span>
+                  <span class="preview-chip" id="preview-typography-label">Calm</span>
+                  <span class="preview-chip preview-accent" id="preview-accent-label">Accent</span>
+                </div>
+              </div>
+              <div class="preview-card">
+                <div class="preview-title">Popup preview</div>
+                <div class="preview-metric">
+                  <span>Focus pulse</span>
+                  <strong>Steady</strong>
+                </div>
+                <div class="preview-chips">
+                  <span class="preview-chip">Compact glance</span>
+                  <span class="preview-chip preview-accent">Open dashboard</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="settings-group" id="summary-voice">
+            <header class="group-header">
+              <h2>Reflection voice</h2>
+              <p>Adjust how summaries sound and feel.</p>
+            </header>
+            <label class="field">
+              <span class="field-label">
+                <span>Summary tone</span>
+                <button type="button" class="help-icon" data-help="Tone used for generated summaries.">?</button>
+              </span>
+              <select id="setting-tone">
+                <option value="neutral">Neutral</option>
+                <option value="direct">Direct</option>
+              </select>
+            </label>
+            <label class="field">
+              <span class="field-label">
+                <span>Summary personality</span>
+                <button type="button" class="help-icon" data-help="Emotional style of generated summaries.">?</button>
+              </span>
+              <select id="setting-summary-personality">
+                <option value="gentle">Gentle</option>
+                <option value="balanced">Balanced</option>
+                <option value="direct">Direct</option>
+              </select>
+            </label>
+            <label class="field">
+              <span class="field-label">
+                <span>Coach voice</span>
+                <button type="button" class="help-icon" data-help="Narrator voice for generated summaries.">?</button>
+              </span>
+              <select id="setting-summary-voice">
+                <option value="mentor">Mentor</option>
+                <option value="analyst">Analyst</option>
+                <option value="friend">Friend</option>
+              </select>
+            </label>
+            <div class="field-grid">
+              <label class="field">
+                <span class="field-label">
+                  <span>Emoji level</span>
+                  <button type="button" class="help-icon" data-help="Emoji intensity in generated summaries.">?</button>
+                </span>
+                <select id="setting-summary-emojis">
+                  <option value="none">None</option>
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </label>
+              <label class="field">
+                <span class="field-label">
+                  <span>Formatting</span>
+                  <button type="button" class="help-icon" data-help="Plain text or markdown output in summaries.">?</button>
+                </span>
+                <select id="setting-summary-formatting">
+                  <option value="plain">Plain</option>
+                  <option value="markdown">Markdown</option>
+                </select>
+              </label>
+              <label class="field">
+                <span class="field-label">
+                  <span>Length</span>
+                  <button type="button" class="help-icon" data-help="Target length for generated summaries.">?</button>
+                </span>
+                <select id="setting-summary-length">
+                  <option value="short">Short</option>
+                  <option value="medium">Medium</option>
+                  <option value="long">Long</option>
+                </select>
+              </label>
+              <label class="field">
+                <span class="field-label">
+                  <span>Verbosity</span>
+                  <button type="button" class="help-icon" data-help="Level of detail in generated summaries.">?</button>
+                </span>
+                <select id="setting-summary-verbosity">
+                  <option value="brief">Brief</option>
+                  <option value="standard">Standard</option>
+                  <option value="detailed">Detailed</option>
+                </select>
+              </label>
+              <label class="field">
+                <span class="field-label">
+                  <span>Technicality</span>
+                  <button type="button" class="help-icon" data-help="How technical the language should be.">?</button>
+                </span>
+                <select id="setting-summary-technicality">
+                  <option value="soft">Soft</option>
+                  <option value="neutral">Neutral</option>
+                  <option value="technical">Technical</option>
+                </select>
+              </label>
+            </div>
+            <label class="field toggle">
+              <input type="checkbox" id="setting-summary-bullets" />
+              <span class="field-label">
+                <span>Use bullet points</span>
+                <button type="button" class="help-icon" data-help="Prefer bullet lists in generated summaries.">?</button>
+              </span>
+            </label>
+            <label class="field toggle">
+              <input type="checkbox" id="setting-summary-metaphors" />
+              <span class="field-label">
+                <span>Allow metaphors</span>
+                <button type="button" class="help-icon" data-help="Allow metaphors in generated summaries.">?</button>
+              </span>
+            </label>
+            <label class="field toggle">
+              <input type="checkbox" id="setting-direct-callouts" />
+              <span class="field-label">
+                <span>Honesty callouts</span>
+                <button type="button" class="help-icon" data-help="Show direct callouts inside the Honesty tab.">?</button>
+              </span>
+            </label>
+            <label class="field toggle">
+              <input type="checkbox" id="setting-intent-drift-alerts" />
+              <span class="field-label">
+                <span>Intent drift alerts</span>
+                <button type="button" class="help-icon" data-help="Surface intent drift signals in insights and callouts.">?</button>
+              </span>
+            </label>
+            <label class="field">
+              <span class="field-label">
+                <span>Intent drift sensitivity</span>
+                <button type="button" class="help-icon" data-help="How aggressively drift is detected.">?</button>
+              </span>
+              <select id="setting-intent-drift-sensitivity">
+                <option value="low">Low</option>
+                <option value="balanced">Balanced</option>
+                <option value="high">High</option>
+              </select>
+            </label>
+          </section>
+
+          <div class="settings-actions">
+            <button type="button" class="ghost undo-pill" id="undo-settings">Undo last change</button>
+            <button type="button" class="ghost danger" id="reset-settings">Reset to defaults</button>
+            <span class="settings-status" id="settings-status"></span>
+          </div>
+        </form>
+      </main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite">
+      <span id="toast-message"></span>
+      <button type="button" id="toast-action" hidden>Undo</button>
+    </div>
+    <script src="../categories.js"></script>
+    <script src="../shared.js"></script>
+    <script src="../insights.js"></script>
+    <script src="dashboard.js"></script>
+  </body>
+</html>

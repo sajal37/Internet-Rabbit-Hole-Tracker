@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Rabbit Hole Tracker</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="popup-shell">
+      <section class="popup-card" id="popup-card">
+        <div class="brand">
+          <div class="brand-top">
+            <span class="eyebrow">Internet Rabbit Hole</span>
+            <span class="mood-chip" id="popup-mood" hidden></span>
+          </div>
+          <h1>Attention Atlas</h1>
+          <p class="tagline" id="popup-note" hidden></p>
+          <p class="micro-note" id="popup-micro-note" hidden></p>
+        </div>
+        <div class="popup-glance" id="popup-glance" hidden></div>
+        <div class="popup-actions">
+          <button class="primary" id="dashboard-button" type="button">
+            <span>Open dashboard</span>
+            <span aria-hidden="true">↗</span>
+          </button>
+        </div>
+      </section>
+    </main>
+    <script src="shared.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>
