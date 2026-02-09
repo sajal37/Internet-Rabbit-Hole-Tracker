@@ -1,75 +1,245 @@
-# Internet Rabbit Hole Tracker (Chrome Extension)
+# Internet Rabbit Hole Tracker
 
-Phase 7 delivers a Chrome-only extension that captures visited pages, calculates
-active time per page, builds navigation chains with session boundaries, adds
-behavior insights (distraction scores, categories, and session labels), and
-ships a standalone dashboard for timeline + graph visualization plus "painfully
-honest" insights. The popup shows the top 5 time sinks for the active session.
+A Chrome extension that acts as a calm, honest mirror of your browsing habits. It tracks where your time actually goes, maps how navigation chains form, and surfaces patterns you might not notice — focus streaks, attention drift, late-night spirals, and the exact page that pulled you down the rabbit hole.
 
-## Install (Chrome)
+No surveillance. No productivity scores. Just reflective insight.
 
-1. Open `chrome://extensions`.
-2. Enable **Developer mode**.
-3. Click **Load unpacked**.
-4. Select this folder: `d:\Documents\Internet Rabbit Hole Tracker`.
+---
 
-## Local proxy (required for Ollama)
+## What It Does
 
-Run `npm start` (or `npm run dev`) to launch the Ollama proxy on port 3010.
+**Active time tracking** — Only counts time when you're actually looking at a tab (focused window + active tab + not idle). No inflated numbers from background tabs.
 
-## What it captures
+**Navigation graph** — Builds a real-time map of how you move between pages. Every `A → B` transition is recorded with visit counts and time spent.
 
-- Active tab switches (`TAB_ACTIVE`)
-- Active tab URL changes (`URL_CHANGED`)
-- Active time per URL (active tab + focused window, idle-aware)
-- Session boundaries after 12 minutes of inactivity (`SESSION_IDLE_THRESHOLD_MS`)
-- Navigation edges (`A -> B`) with counts and timestamps
-- Trap door candidates based on post-visit time + chain depth (20+ minutes or 6+ hops)
-- Distraction scoring (time + chain depth + late-night signals)
-- Auto categories (Study, Social, Video, Shopping, News, Random)
-- Session label summaries
-- Idle-aware timing (chrome.idle + user input inactivity)
-- Same-page navigation tracking (title + SPA history + hash changes)
-- Damage receipts + return path in the dashboard
-- Optional shame callouts in the dashboard
+**Distraction scoring** — Each page gets a score based on active time, chain depth, late-night browsing, category, and behavioral signals like rapid hopping or feed scrolling.
 
-## Popup
+**Intent drift detection** — Measures how scattered your attention is across domains and categories using entropy analysis. Tells you when you've drifted far from where you started.
 
-Open the extension popup to view the top 5 "time vampires" by active time in
-the current session. Use the **Dashboard** button to jump straight into the
-live dashboard, or manage the current session with new/archived/deleted actions.
+**Trap door detection** — Identifies the specific page that sent you spiraling. "You visited reddit.com and then spent 45 minutes going 12 pages deep."
 
-## Dashboard
+**Daily sessions** — One session per calendar day (midnight to midnight). No arbitrary timeout-based splitting.
 
-Open the dashboard from the popup (**Dashboard**) or from the extension
-options page. The dashboard reads from `chrome.storage.local` and updates live
-as you browse.
+**Auto-categorization** — Pages are classified as Study, Social, Video, Shopping, News, or Random based on domain rules, with full override support.
 
-You'll see:
+---
 
-- Timeline view (active time blocks)
-- Graph view (nodes + edges)
-- Stats view (time sinks, top domains, chain depth, trap doors, session label)
-- Painfully honest view (damage receipts, return path, optional shame)
-- Session controls (new session, archive, delete)
-- Settings (session timeout, idle timeout, custom categories, theme, sync toggle)
+## Screenshots
 
-## Sync (optional)
+| Popup | Dashboard | Graph |
+|-------|-----------|-------|
+| Quick-glance metrics + one-tap action | Timeline, stats, insights, sessions | Interactive navigation graph by domain or page |
 
-Enable **Sync data across devices** in the dashboard settings to store recent
-sessions in `chrome.storage.sync`. This keeps a small snapshot so you can view
-your latest activity on another device.
+---
 
-## Publish (Chrome Web Store)
+## Install
 
-1. Zip the extension folder.
-2. Visit the Chrome Web Store Developer Dashboard.
-3. Upload the zip, complete listing details, and submit for review.
+### Chrome (Developer Mode)
 
-## Data model (summary)
+```
+1. Clone this repo (or download the ZIP)
+2. Open chrome://extensions
+3. Enable "Developer mode" (top right)
+4. Click "Load unpacked"
+5. Select the project folder
+```
 
-The state is stored in `chrome.storage.local` under `irht_state`.
+That's it. No build step required — the extension runs directly from source.
 
-- `sessions`: all captured sessions (per-session nodes, edges, events, trap doors)
-- `activeSessionId`: current session id
-- `tracking`: current active tab/url for continuity
+### Optional: AI Summaries via Ollama
+
+If you have [Ollama](https://ollama.ai) running locally, the extension can generate AI-powered session summaries.
+
+```bash
+npm install
+npm start        # starts proxy on http://localhost:3010
+```
+
+The proxy relays prompts to Ollama's API. Configure the endpoint and model in dashboard settings.
+
+---
+
+## Usage
+
+### Popup
+Click the extension icon for an at-a-glance view:
+- Active time, top domain, distraction score, session label
+- Customizable quick-glance metrics (pick up to 5)
+- One-tap primary action (open dashboard, pause tracking, copy summary, start focus)
+- Mood chip, notes, and micro-notes for personal context
+
+### Dashboard
+Open from the popup button or the extension's options page. It updates live as you browse.
+
+- **Overview** — Mirror summary, behavioral insights, and session actions
+- **Timeline** — Visual blocks of active time per domain across the day
+- **Graph** — Interactive force-directed graph of your navigation (domain or page mode, filterable, searchable)
+- **Stats** — Deepest chain, top domains, top pages, top distractions, trap doors, common start points
+- **Honesty** — Damage receipts, return path from start → trap door → end, optional direct callouts
+- **Sessions** — Browse, favorite, delete, and filter past sessions with calendar navigation
+
+### Settings
+Four organized settings pages:
+
+| Page | Controls |
+|------|----------|
+| **Popup** | Layout, density, quick-glance toggles, primary action, labels, mood |
+| **Dashboard** | Section visibility, session list style, focus prompts, story mode |
+| **Personalization** | Theme (6 options), tone, typography, accent color, motion, summary style (voice, personality, emoji, length, verbosity, formatting) |
+| **Technical** | Timeouts, site lists, category overrides, Ollama config, sync, export, reset |
+
+---
+
+## Architecture
+
+```
+┌─────────────┐     user_activity     ┌──────────────────┐
+│ content.js  │ ───────────────────→  │  background.js   │
+│ (activity   │                       │  (service worker) │
+│  heartbeat) │                       │                   │
+└─────────────┘                       │  Sessions, graph, │
+                                      │  scoring, persist │
+┌─────────────┐     chrome.storage    │                   │
+│  popup.js   │ ←───────────────────  └──────────────────┘
+│ (micro UI)  │                              │
+└─────────────┘                              │ port / storage
+                                             ▼
+┌─────────────────────────────────────────────────────┐
+│  dashboard/dashboard.js                             │
+│  (timeline, graph, stats, honesty, settings, AI)    │
+│                                                     │
+│  dashboard/realtime-worker.js  (Web Worker for      │
+│   graph/timeline/stats derivation off main thread)  │
+└─────────────────────────────────────────────────────┘
+         │
+         │ optional
+         ▼
+┌─────────────────┐        ┌─────────────┐
+│ ollama-proxy.js │ ──→    │  Ollama API │
+│ (localhost:3010)│        │  (local LLM)│
+└─────────────────┘        └─────────────┘
+```
+
+**Key design decisions:**
+- MV3 service worker — no persistent background page
+- Active time = tab focused + window focused + user not idle (triple-gated)
+- Content script uses adaptive throttling (2.5s–14s based on activity type)
+- Navigation events are coalesced (150ms–900ms window) to avoid SPA noise
+- Storage uses URL table deduplication + session trimming to stay under Chrome limits
+- Events stored in a ring buffer (max 5,000 per session)
+- Realtime dashboard updates via `chrome.runtime.connect` ports with optional delta sync and batching
+
+---
+
+## Project Structure
+
+```
+├── manifest.json              # MV3 extension manifest
+├── background.js              # Service worker — tracking core
+├── content.js                 # Activity heartbeat (mouse/keyboard/scroll/visibility)
+├── shared.js                  # Shared scoring (distraction, intent drift, entropy)
+├── insights.js                # Heuristic session analysis (no AI)
+├── categories.js              # Domain → category rules + multipliers
+├── popup.html / popup.js      # Extension popup UI
+├── popup.css                  # Popup styles
+├── ollama-proxy.js            # Optional Node.js proxy for Ollama
+├── dashboard/
+│   ├── index.html             # Dashboard page
+│   ├── dashboard.js           # Dashboard logic (7k+ lines)
+│   ├── dashboard.css          # Dashboard styles
+│   ├── realtime-worker.js     # Web Worker for heavy computation
+│   ├── summary-shared.js      # Shared summary data builder
+│   ├── settings.html          # Settings hub (popup settings)
+│   ├── settings-dashboard.html
+│   ├── settings-personalization.html
+│   ├── settings-technical.html
+│   └── settings.css           # Settings styles
+├── test/
+│   ├── background.test.js
+│   ├── content.test.js
+│   ├── dashboard.test.js
+│   ├── insights.test.js
+│   ├── popup.test.js
+│   ├── shared.test.js
+│   ├── ollama-proxy.test.js
+│   ├── realtime-worker.test.js
+│   └── test-helpers.js
+├── package.json
+└── PROJECT.md                 # Exhaustive internal documentation
+```
+
+---
+
+## Testing
+
+```bash
+npm test
+```
+
+Runs the full test suite using Node's built-in test runner with [c8](https://github.com/bcoe/c8) for coverage. **100% coverage is enforced** on lines, functions, branches, and statements — the build fails if any metric drops below 100%.
+
+8 test files cover all source modules. No external test framework needed.
+
+---
+
+## How Scoring Works
+
+### Distraction Score (per page)
+
+Each visited page gets a distraction score from these weighted signals:
+
+| Signal | What it measures |
+|--------|------------------|
+| Active time weight | Log-scaled time on page (capped at 1.6) |
+| Chain depth weight | How deep in the navigation chain the page sits |
+| Late-night weight | +0.6 if visited between 11 PM and 6 AM |
+| Category multiplier | Study (0.7×) → News (0.85×) → Random (1.0×) → Shopping (1.15×) → Social (1.3×) → Video (1.4×) |
+| Intent modifiers | Technical URLs (0.4×), sustained focus (0.75×), rapid hops (1.15×), feed scrolling (1.1×), looping (1.1×) |
+| Site overrides | Productive sites (0.7×), distracting sites (1.2×) |
+
+The session-level score is the time-weighted average across all pages, normalized to 0–100.
+
+### Intent Drift (per session)
+
+Measures attention scatter using:
+- Domain entropy (how spread your time is across domains)
+- Category entropy (how mixed the content types are)
+- Hop rate, short dwell ratio, cross-domain transitions
+- Anchor strength (how much one page held attention)
+
+Output: Low / Medium / High with confidence level and top contributing factors.
+
+---
+
+## Storage
+
+All data stays local by default.
+
+| Key | Location | Purpose |
+|-----|----------|---------|
+| `irht_state` | `chrome.storage.local` | Full state (sessions, graph, tracking) |
+| `irht_settings` | `chrome.storage.sync` | User settings |
+| `irht_state_sync` | `chrome.storage.sync` | Optional slim snapshot for multi-device |
+
+Enable **Sync** in settings to keep a small snapshot of recent sessions in `chrome.storage.sync` for multi-device continuity.
+
+---
+
+## Permissions
+
+| Permission | Why |
+|------------|-----|
+| `tabs` | Track active tab switches |
+| `storage` | Persist session data and settings |
+| `webNavigation` | Detect page navigations, SPA history changes, hash changes |
+| `idle` | Detect system idle state |
+| `alarms` | Periodic idle checks and active time flush |
+| `windows` | Detect window focus changes |
+| `host_permissions: <all_urls>` | Content script for activity detection on all pages |
+| `host_permissions: localhost:3010` | Optional AI proxy communication |
+
+---
+
+## License
+
+MIT
