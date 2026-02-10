@@ -21,6 +21,24 @@
     }
   }
 
+  function getDomain(url) {
+    return safeHostname(url);
+  }
+
+  function formatDuration(ms) {
+    const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    if (minutes > 0) {
+      return `${minutes}m ${seconds}s`;
+    }
+    return `${seconds}s`;
+  }
+
   function matchesDomain(host, pattern) {
     if (!host || !pattern) {
       return false;
@@ -30,6 +48,117 @@
       return host.endsWith(normalized);
     }
     return host === normalized || host.endsWith(`.${normalized}`);
+  }
+
+  function getSessionEvents(session) {
+    if (!session || !Array.isArray(session.events)) {
+      return [];
+    }
+    if (typeof session.eventCursor !== "number" || session.eventCount === 0) {
+      return session.events.slice();
+    }
+    const total = Math.min(session.eventCount, session.events.length);
+    if (total <= 0) {
+      return [];
+    }
+    if (total < session.events.length) {
+      return session.events.slice(0, total);
+    }
+    const cursor = session.eventCursor % session.events.length;
+    return session.events.slice(cursor).concat(session.events.slice(0, cursor));
+  }
+
+  function getLatestEvent(session) {
+    if (!session || !Array.isArray(session.events) || !session.events.length) {
+      return null;
+    }
+    if (typeof session.eventCursor !== "number" || session.eventCount === 0) {
+      return session.events[session.events.length - 1] || null;
+    }
+    const length = session.events.length;
+    const index = (session.eventCursor - 1 + length) % length;
+    return session.events[index] || null;
+  }
+
+  function getSessionActiveMs(session, tracking = null, options = {}) {
+    if (!session) {
+      return 0;
+    }
+    const preferMetrics = options.preferMetrics !== false;
+    let totalActiveMs = 0;
+    if (
+      preferMetrics &&
+      session.metrics &&
+      Number.isFinite(session.metrics.totalActiveMs)
+    ) {
+      totalActiveMs = session.metrics.totalActiveMs;
+    } else {
+      totalActiveMs = Object.values(session.nodes || {}).reduce(
+        (sum, node) => sum + (node.activeMs || 0),
+        0,
+      );
+    }
+    if (
+      tracking?.activeSince &&
+      tracking.activeUrl &&
+      session.nodes &&
+      tracking.activeUrl in session.nodes
+    ) {
+      const live = Math.max(0, Date.now() - tracking.activeSince);
+      return totalActiveMs + live;
+    }
+    return totalActiveMs;
+  }
+
+  function buildTopDomains(session) {
+    if (!session || !session.nodes) {
+      return [];
+    }
+    const totals = new Map();
+    Object.values(session.nodes || {}).forEach((node) => {
+      const domain = getDomain(node.url);
+      if (!domain) {
+        return;
+      }
+      totals.set(domain, (totals.get(domain) || 0) + (node.activeMs || 0));
+    });
+    return Array.from(totals.entries())
+      .map(([domain, activeMs]) => ({ domain, activeMs }))
+      .sort((a, b) => b.activeMs - a.activeMs);
+  }
+
+  function findSessionStartUrl(session) {
+    if (!session) {
+      return null;
+    }
+    const events = getSessionEvents(session)
+      .slice()
+      .sort((a, b) => (a?.ts || 0) - (b?.ts || 0));
+    for (const event of events) {
+      if (event?.type === "navigation" && event.toUrl) {
+        return event.toUrl;
+      }
+      if (
+        (event?.type === "TAB_ACTIVE" || event?.type === "URL_CHANGED") &&
+        event.url
+      ) {
+        return event.url;
+      }
+    }
+    const nodes = Object.values(session.nodes || {});
+    if (!nodes.length) {
+      return null;
+    }
+    nodes.sort((a, b) => (a.firstSeen || 0) - (b.firstSeen || 0));
+    return nodes[0].url || null;
+  }
+
+  function isLateNight(timestamp, start = 23, end = 6) {
+    if (!timestamp) {
+      return false;
+    }
+    const hour = new Date(timestamp).getHours();
+    return hour >= start || hour < end;
   }
 
   function matchHostToList(host, list, matcher = matchesDomain) {
@@ -518,6 +647,14 @@
     resolveCategoryWithAI,
     normalizeDistractionScore,
     getDistractionLabel,
+    formatDuration,
+    getDomain,
+    getSessionEvents,
+    getLatestEvent,
+    getSessionActiveMs,
+    buildTopDomains,
+    findSessionStartUrl,
+    isLateNight,
     computeIntentDrift,
   };
 
@@ -525,12 +662,20 @@
     globalThis.__IRHT_TEST_HOOKS__ = globalThis.__IRHT_TEST_HOOKS__ || {};
     globalThis.__IRHT_TEST_HOOKS__.shared = {
       safeHostname,
+      getDomain,
+      formatDuration,
       matchesDomain,
       matchHostToList,
       isTechnicalUrl,
       resolveCategoryWithAI,
       computeNormalizedEntropy,
       getMaxShare,
+      getSessionEvents,
+      getLatestEvent,
+      getSessionActiveMs,
+      buildTopDomains,
+      findSessionStartUrl,
+      isLateNight,
       computeSessionSignals,
       computeDistractionScore,
       normalizeDistractionScore,

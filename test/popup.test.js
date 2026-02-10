@@ -16,19 +16,13 @@ function loadPopup({ dom, chrome, extraGlobals = {} }) {
     chrome,
     extraGlobals,
   });
+  loadScript(rootPath("shared.js"), context);
   loadScript(rootPath("popup.js"), context);
   return { context, hooks: context.__IRHT_TEST_HOOKS__.popup, chrome };
 }
 
 function loadPopupWithShared({ dom, chrome, extraGlobals = {} }) {
-  const context = createContext({
-    dom,
-    chrome,
-    extraGlobals,
-  });
-  loadScript(rootPath("shared.js"), context);
-  loadScript(rootPath("popup.js"), context);
-  return { context, hooks: context.__IRHT_TEST_HOOKS__.popup, chrome };
+  return loadPopup({ dom, chrome, extraGlobals });
 }
 
 test("popup init wires button", () => {
@@ -914,6 +908,7 @@ test("popup auto init branch", () => {
     chrome,
     extraGlobals: { __IRHT_TEST__: false },
   });
+  loadScript(rootPath("shared.js"), context);
   loadScript(rootPath("popup.js"), context);
 });
 
@@ -927,9 +922,10 @@ test("popup format helpers fall back without shared helpers", () => {
   context.IRHTShared = null;
   assert.equal(hooks.normalizeDistractionScore(3.2), 0);
   assert.equal(hooks.getDistractionLabel(20), "Focused");
+  assert.equal(hooks.formatDuration(1000), "1s");
+  assert.equal(hooks.getLatestEvent({ events: [] }), null);
+  assert.equal(hooks.getDomain("not a url"), null);
   context.IRHTShared = sharedBackup;
-
-  assert.equal(hooks.getDomain("not a url"), "");
 });
 
 test("popup last action uses ring buffer cursor", () => {

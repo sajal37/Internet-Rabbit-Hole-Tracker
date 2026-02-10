@@ -35,6 +35,7 @@ function loadDashboard({
   loadScript(rootPath("dashboard", "summary-shared.js"), context);
   loadScript(rootPath("categories.js"), context);
   loadScript(rootPath("dashboard", "summary-shared.js"), context);
+  loadScript(rootPath("dashboard", "graph.js"), context);
   loadScript(rootPath("dashboard", "dashboard.js"), context);
   if (context.__IRHT_TEST_HOOKS__?.dashboard?.bindControls) {
     context.__IRHT_TEST_HOOKS__.dashboard.bindControls();
@@ -2180,6 +2181,13 @@ test("dashboard branch coverage", async () => {
   hooks.computeSessionSignals({ nodes: {} });
   hooks.computeDistractionScore({ activeMs: 0 }, { navigationCount: 0 });
   hooks.isTechnicalUrl("https://example.com/login");
+  hooks.getSessionActiveMs({ nodes: {} }, null);
+  hooks.formatDuration(1000);
+  hooks.getDomain("https://example.com/");
+  hooks.buildTopDomains({ nodes: {} });
+  hooks.findSessionStartUrl({ events: [], nodes: {} });
+  hooks.matchesDomain("example.com", "example.com");
+  hooks.isLateNight(null);
   context.IRHTShared = sharedBackup;
 
   hooks.computeDistractionScore(
@@ -3248,6 +3256,7 @@ test("dashboard initLiveDashboard prod path", () => {
   loadScript(rootPath("shared.js"), context);
   loadScript(rootPath("insights.js"), context);
   loadScript(rootPath("dashboard", "summary-shared.js"), context);
+  loadScript(rootPath("dashboard", "graph.js"), context);
   loadScript(rootPath("dashboard", "dashboard.js"), context);
 });
 
@@ -4315,6 +4324,7 @@ test("dashboard test hooks reuse existing object", () => {
     chrome,
     extraGlobals: { __IRHT_TEST_HOOKS__: { existing: true } },
   });
+  loadScript(rootPath("dashboard", "graph.js"), context);
   loadScript(rootPath("dashboard", "dashboard.js"), context);
   assert.ok(context.__IRHT_TEST_HOOKS__.dashboard);
 });
@@ -8948,15 +8958,22 @@ test("dashboard branch coverage completion sweep", async () => {
   const setTimeoutBackup = context.setTimeout;
   const clearTimeoutBackup = context.clearTimeout;
   const fetchBackup = context.fetch;
+  let timeoutCallback = null;
   context.setTimeout = (cb) => {
-    cb();
+    timeoutCallback = cb;
     return 1;
   };
-  context.clearTimeout = () => {};
+  context.clearTimeout = () => {
+    timeoutCallback = null;
+  };
   context.fetch = () => new Promise(() => {});
   let timeoutError = null;
   try {
-    await context.requestOllama("http://ollama", "model", "prompt");
+    const timeoutPromise = context.requestOllama("http://ollama", "model", "prompt");
+    if (timeoutCallback) {
+      timeoutCallback();
+    }
+    await timeoutPromise;
   } catch (error) {
     timeoutError = error;
   }

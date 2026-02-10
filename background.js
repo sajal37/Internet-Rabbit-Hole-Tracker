@@ -18,9 +18,52 @@ const DEFAULT_SETTINGS = {
   categoryOverrides: {},
   tone: "neutral",
   directCallouts: false,
+  intentDriftAlerts: true,
+  intentDriftSensitivity: "balanced",
   productiveSites: [],
   distractingSites: [],
-  intentDriftSensitivity: "balanced",
+  summaryAutoRefresh: false,
+  dashboardFocusNote: "",
+  popupNote: "",
+  dashboardButtonLabel: "Open dashboard",
+  uiDensity: "comfortable",
+  reduceMotion: false,
+  sessionListLimit: 12,
+  ollamaEndpoint: "http://localhost:3010/analyze",
+  ollamaModel: "llama3",
+  popupLayout: "stack",
+  popupDensity: "roomy",
+  popupQuickGlance: [],
+  popupPrimaryAction: "open_dashboard",
+  popupMicroNote: "",
+  popupMood: "",
+  dashboardSections: {
+    overview: true,
+    sessions: false,
+    timeline: false,
+    graph: false,
+    stats: false,
+    honesty: false,
+    callouts: false,
+  },
+  dashboardStoryMode: false,
+  sessionListStyle: "cards",
+  pinActiveSession: true,
+  focusPrompts: [],
+  showOutcomeHighlights: false,
+  accentColor: "",
+  typographyStyle: "calm",
+  summaryPersonality: "balanced",
+  summaryEmojis: "low",
+  summaryFormatting: "plain",
+  summaryBullets: false,
+  summaryMetaphors: false,
+  summaryLength: "medium",
+  summaryVerbosity: "standard",
+  summaryTechnicality: "neutral",
+  summaryVoice: "mentor",
+  summaryRefreshCooldownMinutes: 0,
+  summaryCacheMinutes: 0,
   realtimeStreamEnabled: false,
   realtimeDeltaSync: false,
   realtimePortPush: true,
@@ -31,7 +74,6 @@ const DEFAULT_SETTINGS = {
   realtimeOptimisticUi: false,
   realtimeWorkerOffload: false,
   realtimeFrameAligned: false,
-  intentDriftAlerts: true,
 };
 const DELETED_RETENTION_DAYS = 7;
 const DELETED_RETENTION_MS = DELETED_RETENTION_DAYS * 24 * 60 * 60 * 1000;
@@ -348,16 +390,11 @@ function trimEventsForStorage(events, limit) {
 }
 
 function getSessionActiveMs(session) {
-  if (!session) {
-    return 0;
-  }
-  if (session.metrics && Number.isFinite(session.metrics.totalActiveMs)) {
-    return session.metrics.totalActiveMs;
-  }
-  return Object.values(session.nodes || {}).reduce(
-    (sum, node) => sum + (node.activeMs || 0),
-    0,
-  );
+  return globalThis.IRHTShared?.getSessionActiveMs
+    ? globalThis.IRHTShared.getSessionActiveMs(session, null, {
+        preferMetrics: true,
+      })
+    : 0;
 }
 
 function scoreSessionValue(session) {
@@ -745,8 +782,8 @@ async function applyDailySessionResetIfNeeded() {
   await storageSet({
     [DAILY_SESSION_RESET_KEY]: timestamp,
     [STORAGE_KEY]: encodeStateForStorage(state),
-  });
-  await storageSyncSet({ [SYNC_STATE_KEY]: null });
+  }, "daily_reset");
+  await storageSyncSet({ [SYNC_STATE_KEY]: null }, "daily_reset_sync");
   return true;
 }
 
@@ -1111,15 +1148,9 @@ function getSessionEvents(session) {
 }
 
 function getLatestEvent(session) {
-  if (!session || !Array.isArray(session.events) || !session.events.length) {
-    return null;
-  }
-  if (typeof session.eventCursor !== "number" || session.eventCount === 0) {
-    return session.events[session.events.length - 1] || null;
-  }
-  const length = session.events.length;
-  const index = (session.eventCursor - 1 + length) % length;
-  return session.events[index] || null;
+  return globalThis.IRHTShared?.getLatestEvent
+    ? globalThis.IRHTShared.getLatestEvent(session)
+    : null;
 }
 
 function getNavigationCoalesceMs(session, timestamp) {
@@ -1284,16 +1315,9 @@ function persistState(reason) {
   syncTrackingToState();
   pruneDeletedSessionsIfNeeded();
   const payload = encodeStateForStorage(state);
-  chrome.storage.local.set({ [STORAGE_KEY]: payload }, () => {
-    if (chrome.runtime.lastError) {
-      recordEvent("storage_error", {
-        message: chrome.runtime.lastError.message,
-        reason,
-      });
-    }
-  });
+  storageSet({ [STORAGE_KEY]: payload }, reason || "persist").then(() => {});
   if (runtime.settings?.syncEnabled) {
-    persistSyncState();
+    persistSyncState(reason);
   }
 }
 
@@ -1562,13 +1586,11 @@ function getLatestSessionEvent(session) {
   return events[index];
 }
 
-function persistSyncState() {
+function persistSyncState(reason) {
   const syncState = buildSyncState(state);
-  chrome.storage.sync.set({ [SYNC_STATE_KEY]: syncState }, () => {
-    if (chrome.runtime.lastError) {
-      recordEvent("sync_error", { message: chrome.runtime.lastError.message });
-    }
-  });
+  storageSyncSet({ [SYNC_STATE_KEY]: syncState }, reason || "sync_persist").then(
+    () => {},
+  );
 }
 
 function buildSyncState(sourceState) {
@@ -1674,10 +1696,32 @@ function storageGet(key) {
   );
 }
 
-function storageSet(payload) {
+function recordStorageError(type, error, reason) {
+  const message =
+    typeof error?.message === "string" && error.message
+      ? error.message
+      : "Unknown storage error";
+  if (state && state.sessions) {
+    recordEvent(type, { message, reason });
+  } else {
+    console.error(`${type}: ${message}`, reason || "");
+  }
+  return message;
+}
+
+function storageSet(payload, reason = "storage_set") {
   return new Promise((resolve) =>
     chrome.storage.local.set(payload, () => {
-      resolve();
+      if (chrome.runtime.lastError) {
+        const message = recordStorageError(
+          "storage_error",
+          chrome.runtime.lastError,
+          reason,
+        );
+        resolve({ ok: false, error: message });
+        return;
+      }
+      resolve({ ok: true });
     }),
   );
 }
@@ -1694,10 +1738,19 @@ function storageSyncGet(key) {
   );
 }
 
-function storageSyncSet(payload) {
+function storageSyncSet(payload, reason = "sync_set") {
   return new Promise((resolve) =>
     chrome.storage.sync.set(payload, () => {
-      resolve();
+      if (chrome.runtime.lastError) {
+        const message = recordStorageError(
+          "sync_error",
+          chrome.runtime.lastError,
+          reason,
+        );
+        resolve({ ok: false, error: message });
+        return;
+      }
+      resolve({ ok: true });
     }),
   );
 }
@@ -1987,24 +2040,19 @@ function getCategoryOverride(host) {
 }
 
 function matchesDomain(host, pattern) {
-  if (!host || !pattern) {
-    return false;
-  }
-  const normalized = pattern.replace(/^\*\./, "").toLowerCase();
-  if (normalized.startsWith(".")) {
-    return host.endsWith(normalized);
-  }
-  return host === normalized || host.endsWith(`.${normalized}`);
+  return globalThis.IRHTShared?.matchesDomain
+    ? globalThis.IRHTShared.matchesDomain(host, pattern)
+    : false;
 }
 
 function isLateNight(timestamp) {
-  if (!timestamp) {
-    return false;
-  }
-  const hour = new Date(timestamp).getHours();
-  return (
-    hour >= DISTRACTION_LATE_NIGHT_START || hour < DISTRACTION_LATE_NIGHT_END
-  );
+  return globalThis.IRHTShared?.isLateNight
+    ? globalThis.IRHTShared.isLateNight(
+        timestamp,
+        DISTRACTION_LATE_NIGHT_START,
+        DISTRACTION_LATE_NIGHT_END,
+      )
+    : false;
 }
 
 function isTechnicalUrl(url) {
@@ -2142,18 +2190,18 @@ function invalidateScoreCaches() {
   if (!state || !state.sessions) {
     return;
   }
-    Object.values(state.sessions).forEach((session) => {
-      Object.values(session?.nodes || {}).forEach((node) => {
-        if (node) {
-          node._scoreCache = null;
-        }
-      });
-      if (session) {
-        session.metrics = null;
-        session._insightsKey = null;
+  Object.values(state.sessions).forEach((session) => {
+    Object.values(session?.nodes || {}).forEach((node) => {
+      if (node) {
+        node._scoreCache = null;
       }
     });
-  }
+    if (session) {
+      session.metrics = null;
+      session._insightsKey = null;
+    }
+  });
+}
 
 function ensureSessionMetrics(session) {
   if (!session) {
@@ -2481,11 +2529,9 @@ function isProductiveCategory(category) {
 }
 
 function getDomain(url) {
-  if (!url) {
-    return null;
-  }
-  const meta = getUrlMeta(url);
-  return meta.domain || null;
+  return globalThis.IRHTShared?.getDomain
+    ? globalThis.IRHTShared.getDomain(url)
+    : null;
 }
 
 function ensureTabState(tabId) {
@@ -3350,8 +3396,15 @@ function handleMessage(message, sender, sendResponse) {
   if (!message || !message.type) {
     return false;
   }
+  const respond = (payload) => {
+    try {
+      sendResponse(payload);
+    } catch (error) {
+      // Message channel may already be closed.
+    }
+  };
   if (message.type === "get_state") {
-    sendResponse({ state });
+    respond({ state });
     return false;
   }
   if (message.type === "user_activity") {
@@ -3359,43 +3412,45 @@ function handleMessage(message, sender, sendResponse) {
     return false;
   }
   if (message.type === "reset_state") {
-    resetState().then(() => sendResponse({ ok: true }));
+    resetState()
+      .then(() => respond({ ok: true }))
+      .catch(() => respond({ ok: false }));
     return true;
   }
   if (message.type === "session_reset") {
     resetActiveSession();
-    sendResponse({ ok: true });
-    return false;
+    respond({ ok: true });
+    return true;
   }
   if (message.type === "session_archive") {
     archiveSession(message.sessionId);
-    sendResponse({ ok: true });
-    return false;
+    respond({ ok: true });
+    return true;
   }
   if (message.type === "session_unarchive") {
     unarchiveSession(message.sessionId);
-    sendResponse({ ok: true });
-    return false;
+    respond({ ok: true });
+    return true;
   }
   if (message.type === "session_delete") {
     deleteSessionById(message.sessionId);
-    sendResponse({ ok: true });
-    return false;
+    respond({ ok: true });
+    return true;
   }
   if (message.type === "session_restore") {
     restoreDeletedSession(message.sessionId);
-    sendResponse({ ok: true });
-    return false;
+    respond({ ok: true });
+    return true;
   }
   if (message.type === "session_favorite_toggle") {
     toggleSessionFavorite(message.sessionId);
-    sendResponse({ ok: true });
-    return false;
+    respond({ ok: true });
+    return true;
   }
   if (message.type === "session_delete_all") {
     deleteAllSessions();
-    sendResponse({ ok: true });
-    return false;
+    respond({ ok: true });
+    return true;
   }
   if (message.type === "session_summary_update") {
     updateSessionSummaries(
@@ -3404,8 +3459,8 @@ function handleMessage(message, sender, sendResponse) {
       message.summaryDetailed,
       message.summaryUpdatedAt,
     );
-    sendResponse({ ok: true });
-    return false;
+    respond({ ok: true });
+    return true;
   }
   return false;
 }
@@ -3456,9 +3511,15 @@ async function resetState() {
   await refreshWindowFocus();
   await refreshIdleState();
   await refreshActiveTab();
-  await storageSet({ [STORAGE_KEY]: encodeStateForStorage(state) });
+  const result = await storageSet(
+    { [STORAGE_KEY]: encodeStateForStorage(state) },
+    "reset_state",
+  );
+  if (!result.ok) {
+    throw new Error(result.error || "Storage reset failed");
+  }
   if (runtime.settings?.syncEnabled) {
-    persistSyncState();
+    persistSyncState("reset_state");
   }
   broadcastRealtime("reset_state");
 }

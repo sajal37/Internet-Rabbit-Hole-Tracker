@@ -26,8 +26,8 @@ No surveillance. No productivity scores. Just reflective insight.
 
 ## Screenshots
 
-| Popup | Dashboard | Graph |
-|-------|-----------|-------|
+| Popup                                 | Dashboard                           | Graph                                          |
+| ------------------------------------- | ----------------------------------- | ---------------------------------------------- |
 | Quick-glance metrics + one-tap action | Timeline, stats, insights, sessions | Interactive navigation graph by domain or page |
 
 ---
@@ -62,13 +62,16 @@ The proxy relays prompts to Ollama's API. Configure the endpoint and model in da
 ## Usage
 
 ### Popup
+
 Click the extension icon for an at-a-glance view:
+
 - Active time, top domain, distraction score, session label
 - Customizable quick-glance metrics (pick up to 5)
 - One-tap primary action (open dashboard, pause tracking, copy summary, start focus)
 - Mood chip, notes, and micro-notes for personal context
 
 ### Dashboard
+
 Open from the popup button or the extension's options page. It updates live as you browse.
 
 - **Overview** — Mirror summary, behavioral insights, and session actions
@@ -79,14 +82,15 @@ Open from the popup button or the extension's options page. It updates live as y
 - **Sessions** — Browse, favorite, delete, and filter past sessions with calendar navigation
 
 ### Settings
+
 Four organized settings pages:
 
-| Page | Controls |
-|------|----------|
-| **Popup** | Layout, density, quick-glance toggles, primary action, labels, mood |
-| **Dashboard** | Section visibility, session list style, focus prompts, story mode |
+| Page                | Controls                                                                                                                            |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| **Popup**           | Layout, density, quick-glance toggles, primary action, labels, mood                                                                 |
+| **Dashboard**       | Section visibility, session list style, focus prompts, story mode                                                                   |
 | **Personalization** | Theme (6 options), tone, typography, accent color, motion, summary style (voice, personality, emoji, length, verbosity, formatting) |
-| **Technical** | Timeouts, site lists, category overrides, Ollama config, sync, export, reset |
+| **Technical**       | Timeouts, site lists, category overrides, Ollama config, sync, export, reset                                                        |
 
 ---
 
@@ -121,6 +125,7 @@ Four organized settings pages:
 ```
 
 **Key design decisions:**
+
 - MV3 service worker — no persistent background page
 - Active time = tab focused + window focused + user not idle (triple-gated)
 - Content script uses adaptive throttling (2.5s–14s based on activity type)
@@ -188,20 +193,21 @@ Runs the full test suite using Node's built-in test runner with [c8](https://git
 
 Each visited page gets a distraction score from these weighted signals:
 
-| Signal | What it measures |
-|--------|------------------|
-| Active time weight | Log-scaled time on page (capped at 1.6) |
-| Chain depth weight | How deep in the navigation chain the page sits |
-| Late-night weight | +0.6 if visited between 11 PM and 6 AM |
-| Category multiplier | Study (0.7×) → News (0.85×) → Random (1.0×) → Shopping (1.15×) → Social (1.3×) → Video (1.4×) |
-| Intent modifiers | Technical URLs (0.4×), sustained focus (0.75×), rapid hops (1.15×), feed scrolling (1.1×), looping (1.1×) |
-| Site overrides | Productive sites (0.7×), distracting sites (1.2×) |
+| Signal              | What it measures                                                                                          |
+| ------------------- | --------------------------------------------------------------------------------------------------------- |
+| Active time weight  | Log-scaled time on page (capped at 1.6)                                                                   |
+| Chain depth weight  | How deep in the navigation chain the page sits                                                            |
+| Late-night weight   | +0.6 if visited between 11 PM and 6 AM                                                                    |
+| Category multiplier | Study (0.7×) → News (0.85×) → Random (1.0×) → Shopping (1.15×) → Social (1.3×) → Video (1.4×)             |
+| Intent modifiers    | Technical URLs (0.4×), sustained focus (0.75×), rapid hops (1.15×), feed scrolling (1.1×), looping (1.1×) |
+| Site overrides      | Productive sites (0.7×), distracting sites (1.2×)                                                         |
 
 The session-level score is the time-weighted average across all pages, normalized to 0–100.
 
 ### Intent Drift (per session)
 
 Measures attention scatter using:
+
 - Domain entropy (how spread your time is across domains)
 - Category entropy (how mixed the content types are)
 - Hop rate, short dwell ratio, cross-domain transitions
@@ -215,11 +221,11 @@ Output: Low / Medium / High with confidence level and top contributing factors.
 
 All data stays local by default.
 
-| Key | Location | Purpose |
-|-----|----------|---------|
-| `irht_state` | `chrome.storage.local` | Full state (sessions, graph, tracking) |
-| `irht_settings` | `chrome.storage.sync` | User settings |
-| `irht_state_sync` | `chrome.storage.sync` | Optional slim snapshot for multi-device |
+| Key               | Location               | Purpose                                 |
+| ----------------- | ---------------------- | --------------------------------------- |
+| `irht_state`      | `chrome.storage.local` | Full state (sessions, graph, tracking)  |
+| `irht_settings`   | `chrome.storage.sync`  | User settings                           |
+| `irht_state_sync` | `chrome.storage.sync`  | Optional slim snapshot for multi-device |
 
 Enable **Sync** in settings to keep a small snapshot of recent sessions in `chrome.storage.sync` for multi-device continuity.
 
@@ -227,16 +233,16 @@ Enable **Sync** in settings to keep a small snapshot of recent sessions in `chro
 
 ## Permissions
 
-| Permission | Why |
-|------------|-----|
-| `tabs` | Track active tab switches |
-| `storage` | Persist session data and settings |
-| `webNavigation` | Detect page navigations, SPA history changes, hash changes |
-| `idle` | Detect system idle state |
-| `alarms` | Periodic idle checks and active time flush |
-| `windows` | Detect window focus changes |
-| `host_permissions: <all_urls>` | Content script for activity detection on all pages |
-| `host_permissions: localhost:3010` | Optional AI proxy communication |
+| Permission                         | Why                                                        |
+| ---------------------------------- | ---------------------------------------------------------- |
+| `tabs`                             | Track active tab switches                                  |
+| `storage`                          | Persist session data and settings                          |
+| `webNavigation`                    | Detect page navigations, SPA history changes, hash changes |
+| `idle`                             | Detect system idle state                                   |
+| `alarms`                           | Periodic idle checks and active time flush                 |
+| `windows`                          | Detect window focus changes                                |
+| `host_permissions: <all_urls>`     | Content script for activity detection on all pages         |
+| `host_permissions: localhost:3010` | Optional AI proxy communication                            |
 
 ---
 

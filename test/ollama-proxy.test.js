@@ -18,11 +18,16 @@ function createMockReq({
   url = "/analyze",
   body = "",
   headers = {},
+  remoteAddress = "127.0.0.1",
 } = {}) {
   const req = new EventEmitter();
   req.method = method;
   req.url = url;
   req.headers = headers;
+  req.socket = { remoteAddress };
+  req.destroy = () => {
+    req.destroyed = true;
+  };
   process.nextTick(() => {
     if (body) {
       req.emit("data", body);
@@ -259,6 +264,55 @@ test("ollama proxy ignores non-string prompt values", async () => {
   await handler(req, res);
   assert.equal(res.statusCode, 200);
   assert.equal(capturedPrompt, "");
+});
+
+test("ollama proxy rejects oversized prompt", async () => {
+  const handler = createRequestHandler({
+    fetchImpl: () => {
+      throw new Error("should not fetch");
+    },
+    maxPromptChars: 3,
+  });
+  const req = createMockReq({
+    method: "POST",
+    url: "/analyze",
+    body: JSON.stringify({ prompt: "toolong" }),
+  });
+  const res = createMockRes();
+  await handler(req, res);
+  assert.equal(res.statusCode, 413);
+  assert.deepEqual(JSON.parse(res.body), { response: "" });
+});
+
+test("ollama proxy rate limits repeated requests", async () => {
+  const handler = createRequestHandler({
+    fetchImpl: async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ response: "ok" }),
+    }),
+    rateLimitMax: 1,
+    rateLimitWindowMs: 1000,
+    rateLimitKeyFn: () => "test-key",
+  });
+  const req1 = createMockReq({
+    method: "POST",
+    url: "/analyze",
+    body: JSON.stringify({ prompt: "hi" }),
+  });
+  const res1 = createMockRes();
+  await handler(req1, res1);
+  assert.equal(res1.statusCode, 200);
+
+  const req2 = createMockReq({
+    method: "POST",
+    url: "/analyze",
+    body: JSON.stringify({ prompt: "hi again" }),
+  });
+  const res2 = createMockRes();
+  await handler(req2, res2);
+  assert.equal(res2.statusCode, 429);
+  assert.equal(res2.headers["Retry-After"], "1");
 });
 
 test("ollama proxy handles empty body and non-string response", async () => {

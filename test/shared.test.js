@@ -48,6 +48,102 @@ test("shared helpers", () => {
   assert.equal(hooks.resolveCategoryWithAI("https://a.com"), null);
 });
 
+test("shared utility helpers", () => {
+  const { hooks } = loadShared();
+
+  assert.equal(hooks.getDomain("https://www.Example.com/path"), "example.com");
+  assert.equal(hooks.getDomain("bad-url"), null);
+
+  assert.equal(hooks.formatDuration(3661000), "1h 1m");
+  assert.equal(hooks.formatDuration(62000), "1m 2s");
+  assert.equal(hooks.formatDuration(1500), "1s");
+
+  assert.equal(hooks.getSessionEvents(null).length, 0);
+
+  const events = [{ ts: 1 }, { ts: 2 }, { ts: 3 }];
+  const sessionLinear = { events };
+  assert.equal(hooks.getLatestEvent(sessionLinear).ts, 3);
+  assert.equal(hooks.getSessionEvents(sessionLinear).length, 3);
+
+  const sessionShort = { events, eventCursor: 1, eventCount: 2 };
+  const shortEvents = hooks.getSessionEvents(sessionShort);
+  assert.equal(shortEvents.length, 2);
+
+  const sessionRing = { events, eventCursor: 2, eventCount: 3 };
+  const ringEvents = hooks.getSessionEvents(sessionRing);
+  assert.equal(ringEvents[0].ts, 3);
+  assert.equal(hooks.getLatestEvent(sessionRing).ts, 2);
+
+  const sessionNegative = { events, eventCursor: 0, eventCount: -1 };
+  assert.equal(hooks.getSessionEvents(sessionNegative).length, 0);
+
+  assert.equal(hooks.getLatestEvent({ events: [] }), null);
+
+  const metricSession = {
+    metrics: { totalActiveMs: 5000 },
+    nodes: { a: { activeMs: 1000 } },
+  };
+  assert.equal(
+    hooks.getSessionActiveMs(metricSession, null, { preferMetrics: true }),
+    5000,
+  );
+
+  const trackingSession = {
+    nodes: { a: { activeMs: 1000 } },
+  };
+  const tracking = { activeSince: Date.now() - 1000, activeUrl: "a" };
+  assert.ok(
+    hooks.getSessionActiveMs(trackingSession, tracking, { preferMetrics: false }) >=
+      1000,
+  );
+
+  const topDomains = hooks.buildTopDomains({
+    nodes: {
+      bad: { url: "bad-url", activeMs: 5 },
+      good: { url: "https://good.com", activeMs: 10 },
+    },
+  });
+  assert.equal(topDomains[0].domain, "good.com");
+  assert.equal(hooks.buildTopDomains(null).length, 0);
+
+  assert.equal(
+    hooks.findSessionStartUrl({
+      events: [{ ts: 1, type: "navigation", toUrl: "https://nav.com" }],
+      nodes: {},
+    }),
+    "https://nav.com",
+  );
+  assert.equal(
+    hooks.findSessionStartUrl({
+      events: [{ ts: 2, type: "URL_CHANGED", url: "https://changed.com" }],
+      nodes: {},
+    }),
+    "https://changed.com",
+  );
+  assert.equal(
+    hooks.findSessionStartUrl({
+      events: [],
+      nodes: {
+        a: { url: "https://late.com", firstSeen: 5 },
+        b: { url: "https://early.com", firstSeen: 1 },
+      },
+    }),
+    "https://early.com",
+  );
+  assert.equal(
+    hooks.findSessionStartUrl({
+      events: [],
+      nodes: {},
+    }),
+    null,
+  );
+
+  const late = new Date();
+  late.setHours(23, 0, 0, 0);
+  assert.equal(hooks.isLateNight(null), false);
+  assert.equal(hooks.isLateNight(late.getTime()), true);
+});
+
 test("shared compute signals and distraction score", () => {
   const { hooks } = loadShared();
 

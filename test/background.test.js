@@ -878,17 +878,17 @@ test("background messaging and session actions", async () => {
   await new Promise((resolve) => setTimeout(resolve, 0));
   assert.equal(response.reset.ok, true);
 
-  assert.equal(hooks.handleMessage({ type: "session_reset" }, {}, sendResponse), false);
-  assert.equal(hooks.handleMessage({ type: "session_archive", sessionId: hooks.getState().activeSessionId }, {}, sendResponse), false);
-  assert.equal(hooks.handleMessage({ type: "session_unarchive", sessionId: hooks.getState().activeSessionId }, {}, sendResponse), false);
-  assert.equal(hooks.handleMessage({ type: "session_delete", sessionId: hooks.getState().activeSessionId }, {}, sendResponse), false);
-  assert.equal(hooks.handleMessage({ type: "session_restore", sessionId: hooks.getState().activeSessionId }, {}, sendResponse), false);
-  assert.equal(hooks.handleMessage({ type: "session_favorite_toggle", sessionId: hooks.getState().activeSessionId }, {}, sendResponse), false);
+  assert.equal(hooks.handleMessage({ type: "session_reset" }, {}, sendResponse), true);
+  assert.equal(hooks.handleMessage({ type: "session_archive", sessionId: hooks.getState().activeSessionId }, {}, sendResponse), true);
+  assert.equal(hooks.handleMessage({ type: "session_unarchive", sessionId: hooks.getState().activeSessionId }, {}, sendResponse), true);
+  assert.equal(hooks.handleMessage({ type: "session_delete", sessionId: hooks.getState().activeSessionId }, {}, sendResponse), true);
+  assert.equal(hooks.handleMessage({ type: "session_restore", sessionId: hooks.getState().activeSessionId }, {}, sendResponse), true);
+  assert.equal(hooks.handleMessage({ type: "session_favorite_toggle", sessionId: hooks.getState().activeSessionId }, {}, sendResponse), true);
   assert.equal(hooks.getState().sessions[hooks.getState().activeSessionId].favorite, true);
-  assert.equal(hooks.handleMessage({ type: "session_favorite_toggle", sessionId: "missing" }, {}, sendResponse), false);
+  assert.equal(hooks.handleMessage({ type: "session_favorite_toggle", sessionId: "missing" }, {}, sendResponse), true);
   hooks.getState().sessions[hooks.getState().activeSessionId].deleted = true;
-  assert.equal(hooks.handleMessage({ type: "session_favorite_toggle", sessionId: hooks.getState().activeSessionId }, {}, sendResponse), false);
-  assert.equal(hooks.handleMessage({ type: "session_delete_all" }, {}, sendResponse), false);
+  assert.equal(hooks.handleMessage({ type: "session_favorite_toggle", sessionId: hooks.getState().activeSessionId }, {}, sendResponse), true);
+  assert.equal(hooks.handleMessage({ type: "session_delete_all" }, {}, sendResponse), true);
   assert.equal(
     hooks.handleMessage(
       {
@@ -901,7 +901,7 @@ test("background messaging and session actions", async () => {
       {},
       sendResponse
     ),
-    false
+    true
   );
   assert.equal(hooks.handleMessage({ type: "unknown" }, {}, sendResponse), false);
 
@@ -1361,6 +1361,11 @@ test("background shared fallback branches", () => {
   hooks.computeSessionSignals({ nodes: {} });
   hooks.computeDistractionScore({ activeMs: 0 }, { navigationCount: 0 });
   hooks.isTechnicalUrl("https://example.com/login");
+  hooks.getSessionActiveMs({ nodes: {} });
+  hooks.getLatestEvent({ events: [] });
+  hooks.getDomain("https://example.com/");
+  hooks.matchesDomain("example.com", "example.com");
+  hooks.isLateNight(null);
   context.IRHTShared = sharedBackup;
 });
 

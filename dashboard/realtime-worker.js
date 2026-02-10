@@ -491,54 +491,23 @@ function computeCommonStart(state) {
 }
 
 function findSessionStartUrl(session) {
-  const events = getSessionEvents(session).slice().sort((a, b) => a.ts - b.ts);
-  for (const event of events) {
-    if (event.type === "navigation" && event.toUrl) {
-      return event.toUrl;
-    }
-    if (
-      (event.type === "TAB_ACTIVE" || event.type === "URL_CHANGED") &&
-      event.url
-    ) {
-      return event.url;
-    }
-  }
-  const nodes = Object.values(session.nodes || {});
-  if (!nodes.length) {
-    return null;
-  }
-  nodes.sort((a, b) => (a.firstSeen || 0) - (b.firstSeen || 0));
-  return nodes[0].url;
+  return globalThis.IRHTShared?.findSessionStartUrl
+    ? globalThis.IRHTShared.findSessionStartUrl(session)
+    : null;
 }
 
 function getSessionActiveMs(session, tracking) {
-  const total = Object.values(session.nodes || {}).reduce(
-    (sum, node) => sum + (node.activeMs || 0),
-    0,
-  );
-  if (
-    tracking?.activeSince &&
-    tracking.activeUrl &&
-    tracking.activeUrl in (session.nodes || {})
-  ) {
-    const live = Math.max(0, Date.now() - tracking.activeSince);
-    return total + live;
-  }
-  return total;
+  return globalThis.IRHTShared?.getSessionActiveMs
+    ? globalThis.IRHTShared.getSessionActiveMs(session, tracking, {
+        preferMetrics: false,
+      })
+    : 0;
 }
 
 function buildTopDomains(session) {
-  const totals = new Map();
-  Object.values(session.nodes || {}).forEach((node) => {
-    const domain = getDomain(node.url);
-    if (!domain) {
-      return;
-    }
-    totals.set(domain, (totals.get(domain) || 0) + (node.activeMs || 0));
-  });
-  return Array.from(totals.entries())
-    .map(([domain, activeMs]) => ({ domain, activeMs }))
-    .sort((a, b) => b.activeMs - a.activeMs);
+  return globalThis.IRHTShared?.buildTopDomains
+    ? globalThis.IRHTShared.buildTopDomains(session)
+    : [];
 }
 
 function buildTopPages(session) {
@@ -575,29 +544,15 @@ function formatDate(timestamp) {
 }
 
 function formatDuration(ms) {
-  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  if (hours > 0) {
-    return `${hours}h ${minutes}m`;
-  }
-  if (minutes > 0) {
-    return `${minutes}m ${seconds}s`;
-  }
-  return `${seconds}s`;
+  return globalThis.IRHTShared?.formatDuration
+    ? globalThis.IRHTShared.formatDuration(ms)
+    : `${Math.max(0, Math.floor(ms / 1000))}s`;
 }
 
 function getDomain(url) {
-  if (!url || typeof url !== "string") {
-    return "";
-  }
-  try {
-    const parsed = new URL(url);
-    return parsed.hostname.replace(/^www\./, "");
-  } catch (error) {
-    return "";
-  }
+  return globalThis.IRHTShared?.getDomain
+    ? globalThis.IRHTShared.getDomain(url)
+    : null;
 }
 
 function truncate(value, max) {
@@ -609,4 +564,4 @@ function truncate(value, max) {
   }
   return `${value.slice(0, Math.max(0, max - 3))}...`;
 }
-self.importScripts && self.importScripts("summary-shared.js");
+self.importScripts && self.importScripts("../shared.js", "summary-shared.js");

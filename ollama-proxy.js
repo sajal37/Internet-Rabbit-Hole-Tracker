@@ -3,8 +3,11 @@ const http = require("node:http");
 
 const PORT = 3010;
 const OLLAMA_URL = "http://localhost:11434/api/generate";
-const OLLAMA_MODEL = "gpt-oss:120b-cloud";
+const OLLAMA_MODEL = "llama3";
 const MAX_BODY_BYTES = 512 * 1024;
+const MAX_PROMPT_CHARS = 20000;
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const RATE_LIMIT_MAX = 30;
 const ALLOWED_ORIGIN_PATTERNS = [
   /^chrome-extension:\/\/.+/i,
   /^http:\/\/localhost(?::\d+)?$/i,
@@ -18,12 +21,15 @@ function isAllowedOrigin(origin) {
   return ALLOWED_ORIGIN_PATTERNS.some((pattern) => pattern.test(origin));
 }
 
-function sendJson(res, statusCode, payload, origin) {
+function sendJson(res, statusCode, payload, origin, extraHeaders = null) {
   const body = JSON.stringify(payload);
   const headers = { "Content-Type": "application/json" };
   if (origin && isAllowedOrigin(origin)) {
     headers["Access-Control-Allow-Origin"] = origin;
     headers["Access-Control-Allow-Headers"] = "Content-Type";
+  }
+  if (extraHeaders && typeof extraHeaders === "object") {
+    Object.assign(headers, extraHeaders);
   }
   res.writeHead(statusCode, headers);
   res.end(body);
@@ -44,10 +50,42 @@ function collectBody(req) {
   });
 }
 
+function getRateLimitKey(req, origin) {
+  if (origin && isAllowedOrigin(origin)) {
+    return origin;
+  }
+  const address = req?.socket?.remoteAddress;
+  return address || "unknown";
+}
+
+function shouldRateLimit(store, key, now, max, windowMs) {
+  if (!key) {
+    return false;
+  }
+  const entry = store.get(key);
+  if (!entry || now >= entry.resetAt) {
+    store.set(key, { count: 1, resetAt: now + windowMs });
+    return false;
+  }
+  entry.count += 1;
+  return entry.count > max;
+}
+
 function createRequestHandler(options = {}) {
   const fetchImpl = options.fetchImpl || fetch;
   const ollamaUrl = options.ollamaUrl || OLLAMA_URL;
   const ollamaModel = options.ollamaModel || OLLAMA_MODEL;
+  const maxPromptChars = Number.isFinite(options.maxPromptChars)
+    ? options.maxPromptChars
+    : MAX_PROMPT_CHARS;
+  const rateLimitMax = Number.isFinite(options.rateLimitMax)
+    ? options.rateLimitMax
+    : RATE_LIMIT_MAX;
+  const rateLimitWindowMs = Number.isFinite(options.rateLimitWindowMs)
+    ? options.rateLimitWindowMs
+    : RATE_LIMIT_WINDOW_MS;
+  const rateLimitKeyFn = options.rateLimitKeyFn || getRateLimitKey;
+  const rateLimitStore = new Map();
 
   return async (req, res) => {
     const origin = req?.headers?.origin;
@@ -78,6 +116,24 @@ function createRequestHandler(options = {}) {
     }
 
     try {
+      if (rateLimitMax > 0 && rateLimitWindowMs > 0) {
+        const key = rateLimitKeyFn(req, origin);
+        const now = Date.now();
+        if (shouldRateLimit(rateLimitStore, key, now, rateLimitMax, rateLimitWindowMs)) {
+          if (typeof req.destroy === "function") {
+            req.destroy();
+          }
+          sendJson(
+            res,
+            429,
+            { response: "" },
+            origin,
+            { "Retry-After": Math.ceil(rateLimitWindowMs / 1000).toString() },
+          );
+          return;
+        }
+      }
+
       const rawBody = await collectBody(req);
       let prompt = "";
       let requestedModel = "";
@@ -89,6 +145,10 @@ function createRequestHandler(options = {}) {
         if (typeof parsed.model === "string") {
           requestedModel = parsed.model.trim();
         }
+      }
+      if (maxPromptChars > 0 && prompt.length > maxPromptChars) {
+        sendJson(res, 413, { response: "" }, origin);
+        return;
       }
       const model = requestedModel || ollamaModel;
 
@@ -163,9 +223,15 @@ module.exports = {
   PORT,
   OLLAMA_URL,
   OLLAMA_MODEL,
+  MAX_BODY_BYTES,
+  MAX_PROMPT_CHARS,
+  RATE_LIMIT_WINDOW_MS,
+  RATE_LIMIT_MAX,
   isAllowedOrigin,
   sendJson,
   collectBody,
+  getRateLimitKey,
+  shouldRateLimit,
   createRequestHandler,
   createProxyServer,
   handleServerError,

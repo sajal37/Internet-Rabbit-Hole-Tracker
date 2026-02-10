@@ -68,8 +68,8 @@ Internet Rabbit Hole Tracker is a Chrome extension that helps users understand h
 - Name: Internet Rabbit Hole Tracker
 - Version: 0.1.0
 - Description: Tracks active browsing time and navigation chains.
-- Permissions: `tabs`, `history`, `storage`, `webNavigation`, `idle`, `alarms`.
-- Host permissions: `<all_urls>` and `http://localhost:3010/*` (local proxy).
+- Permissions: `tabs`, `windows`, `storage`, `webNavigation`, `idle`, `alarms`.
+- Host permissions: `http://*/*`, `https://*/*`, and `http://localhost:3010/*` (local proxy).
 - Background service worker: `background.js`.
 - Options page: `dashboard/settings.html` (opens in tab).
 - Content script: `content.js` on `<all_urls>`, run at `document_idle`.
@@ -493,7 +493,7 @@ An internal "adaptive" action exists in popup logic but is not exposed in the se
 - reduceMotion: false
 - sessionListLimit: 12
 - ollamaEndpoint: "http://localhost:3010/analyze"
-- ollamaModel: "gpt-oss:120b-cloud"
+- ollamaModel: "llama3"
 - popupLayout: stack
 - popupDensity: roomy
 - popupQuickGlance: []
@@ -546,7 +546,7 @@ An internal "adaptive" action exists in popup logic but is not exposed in the se
 
 - Runs on port 3010 and exposes `/analyze`.
 - Forwards prompts to local Ollama at `http://localhost:11434/api/generate`.
-- Uses model `gpt-oss:120b-cloud` by default.
+- Uses model `llama3` by default.
 - Adds CORS headers to allow the dashboard to fetch summaries.
 
 ## Testing

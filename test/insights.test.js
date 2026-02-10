@@ -9,6 +9,7 @@ const {
 
 function loadInsights(clock) {
   const context = createContext({ clock });
+  loadScript(rootPath("shared.js"), context);
   loadScript(rootPath("insights.js"), context);
   return { context, hooks: context.__IRHT_TEST_HOOKS__.insights };
 }
@@ -25,7 +26,7 @@ test("insights helpers and mirrors", () => {
   assert.equal(hooks.formatDuration(1500), "1s");
 
   assert.equal(hooks.getDomain("bad-url"), null);
-  assert.equal(hooks.getDomain("https://www.example.com/path"), "www.example.com");
+  assert.equal(hooks.getDomain("https://www.example.com/path"), "example.com");
 
   const activeMs = hooks.getSessionActiveMs(
     { nodes: { a: { activeMs: 1000 }, b: { activeMs: 2000 } } },
@@ -105,7 +106,7 @@ test("insights helpers and mirrors", () => {
 
 test("insights coverage extras", () => {
   const clock = createClock(5000);
-  const { hooks } = loadInsights(clock);
+  const { hooks, context } = loadInsights(clock);
 
   assert.equal(hooks.getDomain(null), null);
   assert.equal(hooks.getSessionActiveMs(null, null), 0);
@@ -165,6 +166,22 @@ test("insights coverage extras", () => {
   );
 
   assert.equal(hooks.isLateNight(null), false);
+
+  const sharedBackup = context.IRHTShared;
+  context.IRHTShared = null;
+  assert.equal(hooks.formatDuration(1000), "1s");
+  assert.equal(hooks.getDomain("https://example.com/"), null);
+  assert.equal(hooks.getSessionActiveMs({ nodes: {} }, null), 0);
+  assert.equal(hooks.buildTopDomains({ nodes: {} }).length, 0);
+  assert.equal(
+    hooks.findSessionStartUrl({
+      events: [],
+      nodes: {},
+    }),
+    null,
+  );
+  assert.equal(hooks.isLateNight(null), false);
+  context.IRHTShared = sharedBackup;
   assert.equal(hooks.collectSessions({}).length, 0);
   assert.equal(
     hooks.generateInsights({ nodes: {} }, null).length,

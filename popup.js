@@ -241,13 +241,9 @@ function applyPopupLayout(settings = {}) {
 }
 
 function formatDuration(ms) {
-  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  if (minutes > 0) {
-    return `${minutes}m ${seconds}s`;
-  }
-  return `${seconds}s`;
+  return globalThis.IRHTShared?.formatDuration
+    ? globalThis.IRHTShared.formatDuration(ms)
+    : `${Math.max(0, Math.floor(ms / 1000))}s`;
 }
 
 function formatScore(score) {
@@ -272,26 +268,15 @@ function getDistractionLabel(normalizedScore) {
 }
 
 function getDomain(url) {
-  if (!url) {
-    return "";
-  }
-  try {
-    return new URL(url).hostname;
-  } catch (error) {
-    return "";
-  }
+  return globalThis.IRHTShared?.getDomain
+    ? globalThis.IRHTShared.getDomain(url)
+    : null;
 }
 
 function getLatestEvent(session) {
-  if (!session || !Array.isArray(session.events) || !session.events.length) {
-    return null;
-  }
-  if (typeof session.eventCursor !== "number" || session.eventCount === 0) {
-    return session.events[session.events.length - 1] || null;
-  }
-  const length = session.events.length;
-  const index = (session.eventCursor - 1 + length) % length;
-  return session.events[index] || null;
+  return globalThis.IRHTShared?.getLatestEvent
+    ? globalThis.IRHTShared.getLatestEvent(session)
+    : null;
 }
 
 function buildPopupMetrics(state) {
@@ -406,9 +391,18 @@ function renderPopupGlance(settings = {}, metrics) {
     if (key === "distractionScore") {
       const score = Number(metrics.distractionScoreValue ?? 0);
       const level = score >= 1.6 ? "level-high" : score >= 0.8 ? "level-mid" : "level-low";
-      item.innerHTML = `<span>${label}</span><strong class="glance-badge ${level}">${valueLabel}</strong>`;
+      const labelSpan = document.createElement("span");
+      labelSpan.textContent = label;
+      const valueStrong = document.createElement("strong");
+      valueStrong.className = `glance-badge ${level}`;
+      valueStrong.textContent = String(valueLabel);
+      item.append(labelSpan, valueStrong);
     } else {
-      item.innerHTML = `<span>${label}</span><strong>${valueLabel}</strong>`;
+      const labelSpan = document.createElement("span");
+      labelSpan.textContent = label;
+      const valueStrong = document.createElement("strong");
+      valueStrong.textContent = String(valueLabel);
+      item.append(labelSpan, valueStrong);
     }
     elements.popupGlance.appendChild(item);
     if (index === maxVisible - 1 && visibleKeys.length > maxVisible) {

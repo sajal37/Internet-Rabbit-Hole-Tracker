@@ -50,17 +50,9 @@
   }
 
   function formatDuration(ms) {
-    const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-    if (hours > 0) {
-      return `${hours}h ${minutes}m`;
-    }
-    if (minutes > 0) {
-      return `${minutes}m ${seconds}s`;
-    }
-    return `${seconds}s`;
+    return globalThis.IRHTShared?.formatDuration
+      ? globalThis.IRHTShared.formatDuration(ms)
+      : `${Math.max(0, Math.floor(ms / 1000))}s`;
   }
 
   function analyzeSession(session, tracking) {
@@ -110,78 +102,35 @@
   }
 
   function getDomain(url) {
-    if (!url) {
-      return null;
-    }
-    try {
-      return new URL(url).hostname;
-    } catch (error) {
-      return null;
-    }
+    return globalThis.IRHTShared?.getDomain
+      ? globalThis.IRHTShared.getDomain(url)
+      : null;
   }
 
   function getSessionActiveMs(session, tracking) {
-    if (!session) {
-      return 0;
-    }
-    const total = Object.values(session.nodes || {}).reduce(
-      (sum, node) => sum + (node.activeMs || 0),
-      0,
-    );
-    if (
-      tracking?.activeSince &&
-      tracking.activeUrl &&
-      tracking.activeUrl in (session.nodes || {})
-    ) {
-      const live = Math.max(0, Date.now() - tracking.activeSince);
-      return total + live;
-    }
-    return total;
+    return globalThis.IRHTShared?.getSessionActiveMs
+      ? globalThis.IRHTShared.getSessionActiveMs(session, tracking, {
+          preferMetrics: false,
+        })
+      : 0;
   }
 
   function buildTopDomains(session) {
-    const domainMap = new Map();
-    Object.values(session?.nodes || {}).forEach((node) => {
-      const domain = getDomain(node.url);
-      if (!domain) {
-        return;
-      }
-      const entry = domainMap.get(domain) || { domain, activeMs: 0 };
-      entry.activeMs += node.activeMs || 0;
-      domainMap.set(domain, entry);
-    });
-    return Array.from(domainMap.values()).sort(
-      (a, b) => b.activeMs - a.activeMs,
-    );
+    return globalThis.IRHTShared?.buildTopDomains
+      ? globalThis.IRHTShared.buildTopDomains(session)
+      : [];
   }
 
   function findSessionStartUrl(session) {
-    const events = (session?.events || []).slice().sort((a, b) => a.ts - b.ts);
-    for (const event of events) {
-      if (event.type === "navigation" && event.toUrl) {
-        return event.toUrl;
-      }
-      if (
-        (event.type === "TAB_ACTIVE" || event.type === "URL_CHANGED") &&
-        event.url
-      ) {
-        return event.url;
-      }
-    }
-    const nodes = Object.values(session?.nodes || {});
-    if (!nodes.length) {
-      return null;
-    }
-    nodes.sort((a, b) => (a.firstSeen || 0) - (b.firstSeen || 0));
-    return nodes[0].url || null;
+    return globalThis.IRHTShared?.findSessionStartUrl
+      ? globalThis.IRHTShared.findSessionStartUrl(session)
+      : null;
   }
 
   function isLateNight(timestamp) {
-    if (!timestamp) {
-      return false;
-    }
-    const hour = new Date(timestamp).getHours();
-    return hour >= 23 || hour < 6;
+    return globalThis.IRHTShared?.isLateNight
+      ? globalThis.IRHTShared.isLateNight(timestamp)
+      : false;
   }
 
   function collectSessions(state) {

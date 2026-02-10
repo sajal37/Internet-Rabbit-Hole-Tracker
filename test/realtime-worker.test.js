@@ -188,6 +188,24 @@ test("summary-shared handles missing nodes", () => {
   assert.ok(lines.includes("Pages touched: 0"));
 });
 
+test("realtime worker shared fallbacks", () => {
+  const { context } = loadWorker();
+  const sharedBackup = context.IRHTShared;
+  context.IRHTShared = null;
+  assert.equal(context.formatDuration(1000), "1s");
+  assert.equal(context.getDomain("https://example.com/"), null);
+  assert.equal(context.getSessionActiveMs({ nodes: {} }, null), 0);
+  assert.equal(context.buildTopDomains({ nodes: {} }).length, 0);
+  assert.equal(
+    context.findSessionStartUrl({
+      events: [],
+      nodes: {},
+    }),
+    null,
+  );
+  context.IRHTShared = sharedBackup;
+});
+
 test("realtime worker graph filters and seed nodes", () => {
   const { context, messages } = loadWorker();
   const session = {
@@ -974,7 +992,7 @@ test("realtime worker coverage extras", () => {
   });
   assert.equal(topDomains.length, 0);
 
-  assert.equal(context.getDomain(null), "");
+  assert.equal(context.getDomain(null), null);
   assert.equal(context.truncate("short", 10), "short");
   assert.equal(context.truncate("longer text", 5), "lo...");
 });
@@ -1103,6 +1121,6 @@ test("realtime worker branch coverage sweep", () => {
   assert.equal(context.buildTopPages({ nodes: {} }).length, 0);
   assert.equal(context.buildTopDistractions({ nodes: { a: { url: "https://a.com", activeMs: 0 } } }).length, 0);
 
-  assert.equal(context.getDomain("bad url"), "");
+  assert.equal(context.getDomain("bad url"), null);
   assert.equal(context.truncate(null, 5), "");
 });
