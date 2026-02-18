@@ -126,7 +126,9 @@ function isInternalUrl(url) {
   if (!url || typeof url !== "string") {
     return false;
   }
-  return /^(chrome(-extension)?|about|edge|brave|moz-extension|extension):/i.test(url);
+  return /^(chrome(-extension)?|about|edge|brave|moz-extension|extension):/i.test(
+    url,
+  );
 }
 function getDomain(url) {
   return globalThis.IRHTShared?.getDomain
@@ -172,18 +174,24 @@ function findSessionStartUrl(session) {
     .slice()
     .sort((a, b) => (a?.ts || 0) - (b?.ts || 0));
   for (const event of events) {
-    if (event?.type === "navigation" && event.toUrl && !isInternalUrl(event.toUrl)) {
+    if (
+      event?.type === "navigation" &&
+      event.toUrl &&
+      !isInternalUrl(event.toUrl)
+    ) {
       return event.toUrl;
     }
     if (
       (event?.type === "TAB_ACTIVE" || event?.type === "URL_CHANGED") &&
-      event.url && !isInternalUrl(event.url)
+      event.url &&
+      !isInternalUrl(event.url)
     ) {
       return event.url;
     }
   }
-  const nodes = Object.values(session.nodes || {})
-    .filter((n) => n.url && !isInternalUrl(n.url));
+  const nodes = Object.values(session.nodes || {}).filter(
+    (n) => n.url && !isInternalUrl(n.url),
+  );
   if (!nodes.length) {
     return null;
   }
@@ -2987,7 +2995,8 @@ function renderStatus() {
   }
   const totalActiveMs = getLiveActiveMs(app.session, app.state?.tracking);
   const nodes = Object.values(app.session.nodes || {});
-  const pageCount = nodes.filter((n) => !isInternalUrl(n.url)).length || nodes.length;
+  const pageCount =
+    nodes.filter((n) => !isInternalUrl(n.url)).length || nodes.length;
   const edges = Object.entries(app.session.edges || {});
   const edgeCount = edges.filter(([key]) => {
     const parts = key.split(" -> ");
@@ -3877,7 +3886,8 @@ function applyPriorityUpdate() {
   }
   if (elements.pageCount) {
     const allNodes = Object.values(session.nodes || {});
-    const visibleCount = allNodes.filter((n) => !isInternalUrl(n.url)).length || allNodes.length;
+    const visibleCount =
+      allNodes.filter((n) => !isInternalUrl(n.url)).length || allNodes.length;
     elements.pageCount.textContent = String(visibleCount);
   }
   if (elements.edgeCount) {
@@ -6239,8 +6249,9 @@ function findSessionEndUrl(session) {
       return e.url;
     }
   }
-  const nodes = Object.values(session.nodes || {})
-    .filter((n) => n.url && !isInternalUrl(n.url));
+  const nodes = Object.values(session.nodes || {}).filter(
+    (n) => n.url && !isInternalUrl(n.url),
+  );
   if (!nodes.length) {
     return null;
   }

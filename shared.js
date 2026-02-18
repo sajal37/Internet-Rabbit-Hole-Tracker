@@ -25,7 +25,9 @@
     if (!url || typeof url !== "string") {
       return false;
     }
-    return /^(chrome(-extension)?|about|edge|brave|moz-extension|extension):/i.test(url);
+    return /^(chrome(-extension)?|about|edge|brave|moz-extension|extension):/i.test(
+      url,
+    );
   }
 
   function getDomain(url) {
@@ -145,18 +147,24 @@
       .slice()
       .sort((a, b) => (a?.ts || 0) - (b?.ts || 0));
     for (const event of events) {
-      if (event?.type === "navigation" && event.toUrl && !isInternalUrl(event.toUrl)) {
+      if (
+        event?.type === "navigation" &&
+        event.toUrl &&
+        !isInternalUrl(event.toUrl)
+      ) {
         return event.toUrl;
       }
       if (
         (event?.type === "TAB_ACTIVE" || event?.type === "URL_CHANGED") &&
-        event.url && !isInternalUrl(event.url)
+        event.url &&
+        !isInternalUrl(event.url)
       ) {
         return event.url;
       }
     }
-    const nodes = Object.values(session.nodes || {})
-      .filter((n) => n.url && !isInternalUrl(n.url));
+    const nodes = Object.values(session.nodes || {}).filter(
+      (n) => n.url && !isInternalUrl(n.url),
+    );
     if (!nodes.length) {
       return null;
     }
@@ -391,7 +399,10 @@
     };
   }
 
-  function normalizeDistractionScore(score, maxScore = DEFAULT_DISTRACTION_MAX) {
+  function normalizeDistractionScore(
+    score,
+    maxScore = DEFAULT_DISTRACTION_MAX,
+  ) {
     if (!Number.isFinite(score)) {
       return 0;
     }
@@ -461,7 +472,8 @@
 
     const matchDomain = options.matchDomain || matchesDomain;
     const settings = options.settings || {};
-    const sensitivity = options.sensitivity || settings.intentDriftSensitivity || "balanced";
+    const sensitivity =
+      options.sensitivity || settings.intentDriftSensitivity || "balanced";
 
     const hopRate = signals?.hopRate ?? 0;
     const avgDwellMs = signals?.avgDwellMs ?? 0;
@@ -521,7 +533,8 @@
       }
       crossDomainTransitions += edge.visitCount || 1;
     });
-    const transitionShare = navCount > 0 ? crossDomainTransitions / navCount : 0;
+    const transitionShare =
+      navCount > 0 ? crossDomainTransitions / navCount : 0;
 
     const nodeCount = Math.max(nodes.length, 1);
     const shortShare = shortDwellCount / nodeCount;
@@ -580,8 +593,7 @@
 
     let score = contributions.reduce((sum, item) => sum + item.value, 0);
 
-    const focusCut =
-      topShare >= 0.6 && avgDwellMs >= 120000 && hopRate <= 1.5;
+    const focusCut = topShare >= 0.6 && avgDwellMs >= 120000 && hopRate <= 1.5;
     if (focusCut) {
       score -= 0.32;
     }
@@ -623,7 +635,12 @@
       mediumThreshold = 0.48;
     }
 
-    const label = score >= highThreshold ? "High" : score >= mediumThreshold ? "Medium" : "Low";
+    const label =
+      score >= highThreshold
+        ? "High"
+        : score >= mediumThreshold
+          ? "Medium"
+          : "Low";
 
     let confidence = "low";
     if (totalActiveMs >= 8 * 60 * 1000 && nodes.length >= 6 && navCount >= 6) {

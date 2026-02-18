@@ -1,4 +1,5 @@
-const IS_TEST = typeof globalThis !== "undefined" && globalThis.__IRHT_TEST__ === true;
+const IS_TEST =
+  typeof globalThis !== "undefined" && globalThis.__IRHT_TEST__ === true;
 const SETTINGS_KEY = "irht_settings";
 const STORAGE_KEY = "irht_state";
 const FORCE_REFRESH_KEY = "irht_force_summary_refresh";
@@ -34,14 +35,14 @@ const QUICK_GLANCE_LABELS = {
   topDomain: "Top domain",
   distractionScore: "Distraction score",
   sessionLabel: "Session label",
-  lastAction: "Last action"
+  lastAction: "Last action",
 };
 
 const ACTION_LABELS = {
   open_dashboard: "Open dashboard",
   pause_tracking: "Pause tracking",
   copy_summary: "Copy summary",
-  start_focus: "Start focus"
+  start_focus: "Start focus",
 };
 
 const GLANCE_PRIORITY = ["activeTime", "distractionScore", "lastAction"];
@@ -52,7 +53,7 @@ const elements = {
   popupCard: document.getElementById("popup-card"),
   popupGlance: document.getElementById("popup-glance"),
   popupMicroNote: document.getElementById("popup-micro-note"),
-  popupMood: document.getElementById("popup-mood")
+  popupMood: document.getElementById("popup-mood"),
 };
 
 let popupSettings = {};
@@ -62,9 +63,10 @@ function normalizePopupSettings(raw = {}) {
   const settings = typeof raw === "object" && raw ? raw : {};
   const next = { ...DEFAULT_POPUP_SETTINGS };
 
-  const theme =
-    typeof settings.theme === "string" ? settings.theme.trim() : "";
-  next.theme = THEME_NAMES.includes(theme) ? theme : DEFAULT_POPUP_SETTINGS.theme;
+  const theme = typeof settings.theme === "string" ? settings.theme.trim() : "";
+  next.theme = THEME_NAMES.includes(theme)
+    ? theme
+    : DEFAULT_POPUP_SETTINGS.theme;
 
   next.accentColor = sanitizeColor(settings.accentColor);
   next.reduceMotion = !!settings.reduceMotion;
@@ -85,7 +87,9 @@ function normalizePopupSettings(raw = {}) {
     : DEFAULT_POPUP_SETTINGS.popupLayout;
 
   const density =
-    typeof settings.popupDensity === "string" ? settings.popupDensity.trim() : "";
+    typeof settings.popupDensity === "string"
+      ? settings.popupDensity.trim()
+      : "";
   next.popupDensity = POPUP_DENSITIES.includes(density)
     ? density
     : DEFAULT_POPUP_SETTINGS.popupDensity;
@@ -162,9 +166,11 @@ function openDashboard() {
 
 function applyPopupCopy(settings = {}) {
   if (elements.dashboardButton) {
-    const label = typeof settings.dashboardButtonLabel === "string" && settings.dashboardButtonLabel.trim()
-      ? settings.dashboardButtonLabel.trim()
-      : DEFAULT_LABEL;
+    const label =
+      typeof settings.dashboardButtonLabel === "string" &&
+      settings.dashboardButtonLabel.trim()
+        ? settings.dashboardButtonLabel.trim()
+        : DEFAULT_LABEL;
     const labelSpan = elements.dashboardButton.querySelector("span");
     if (labelSpan) {
       labelSpan.textContent = label;
@@ -173,7 +179,8 @@ function applyPopupCopy(settings = {}) {
     }
   }
   if (elements.popupNote) {
-    const note = typeof settings.popupNote === "string" ? settings.popupNote.trim() : "";
+    const note =
+      typeof settings.popupNote === "string" ? settings.popupNote.trim() : "";
     const finalNote = note || DEFAULT_NOTE;
     elements.popupNote.textContent = finalNote;
     elements.popupNote.hidden = !finalNote;
@@ -184,7 +191,8 @@ function applyPopupMood(settings = {}) {
   if (!elements.popupMood) {
     return;
   }
-  const mood = typeof settings.popupMood === "string" ? settings.popupMood.trim() : "";
+  const mood =
+    typeof settings.popupMood === "string" ? settings.popupMood.trim() : "";
   const finalMood = mood || DEFAULT_MOOD;
   elements.popupMood.textContent = finalMood ? `${finalMood}` : "";
   elements.popupMood.hidden = !finalMood;
@@ -194,7 +202,10 @@ function applyPopupMicroNote(settings = {}) {
   if (!elements.popupMicroNote) {
     return;
   }
-  const note = typeof settings.popupMicroNote === "string" ? settings.popupMicroNote.trim() : "";
+  const note =
+    typeof settings.popupMicroNote === "string"
+      ? settings.popupMicroNote.trim()
+      : "";
   elements.popupMicroNote.textContent = note ? `${note}` : "";
   elements.popupMicroNote.hidden = !note;
 }
@@ -236,7 +247,11 @@ function applyPopupLayout(settings = {}) {
   const layout = POPUP_LAYOUTS.includes(settings.popupLayout)
     ? settings.popupLayout
     : "stack";
-  elements.popupCard.classList.remove("layout-stack", "layout-cards", "layout-focus");
+  elements.popupCard.classList.remove(
+    "layout-stack",
+    "layout-cards",
+    "layout-focus",
+  );
   elements.popupCard.classList.add(`layout-${layout}`);
 }
 
@@ -274,7 +289,9 @@ function isInternalUrl(url) {
   if (!url || typeof url !== "string") {
     return false;
   }
-  return /^(chrome(-extension)?|about|edge|brave|moz-extension|extension):/i.test(url);
+  return /^(chrome(-extension)?|about|edge|brave|moz-extension|extension):/i.test(
+    url,
+  );
 }
 
 function getDomain(url) {
@@ -293,7 +310,9 @@ function buildPopupMetrics(state) {
   if (!state || !state.sessions) {
     return null;
   }
-  const sessionId = state.activeSessionId || state.sessionOrder?.[state.sessionOrder.length - 1];
+  const sessionId =
+    state.activeSessionId ||
+    state.sessionOrder?.[state.sessionOrder.length - 1];
   const session = sessionId ? state.sessions[sessionId] : null;
   if (!session) {
     return null;
@@ -327,10 +346,13 @@ function buildPopupMetrics(state) {
       }
     }
   }
-  const topDomain = Object.entries(domainTotals).sort((a, b) => b[1] - a[1])[0]?.[0] || "";
+  const topDomain =
+    Object.entries(domainTotals).sort((a, b) => b[1] - a[1])[0]?.[0] || "";
   const lastEvent = getLatestEvent(session);
   const lastAction = formatEventLabel(lastEvent);
-  const scoreValue = Number.isFinite(session.distractionAverage) ? session.distractionAverage : 0;
+  const scoreValue = Number.isFinite(session.distractionAverage)
+    ? session.distractionAverage
+    : 0;
   return {
     activeTime: formatDuration(activeMs),
     topDomain,
@@ -340,7 +362,7 @@ function buildPopupMetrics(state) {
     lastAction,
     summary: session.summaryBrief || session.label || "",
     sessionEnded: !!session.endedAt,
-    isIdle: !!tracking.userIdle
+    isIdle: !!tracking.userIdle,
   };
 }
 
@@ -361,7 +383,8 @@ function renderPopupGlance(settings = {}, metrics) {
   if (!metrics) {
     const item = document.createElement("div");
     item.className = "glance-item";
-    item.innerHTML = "<strong>No session yet</strong><span>Start tracking to see stats.</span>";
+    item.innerHTML =
+      "<strong>No session yet</strong><span>Start tracking to see stats.</span>";
     elements.popupGlance.appendChild(item);
     return;
   }
@@ -403,7 +426,8 @@ function renderPopupGlance(settings = {}, metrics) {
     const valueLabel = value || "-";
     if (key === "distractionScore") {
       const score = Number(metrics.distractionScoreValue ?? 0);
-      const level = score >= 1.6 ? "level-high" : score >= 0.8 ? "level-mid" : "level-low";
+      const level =
+        score >= 1.6 ? "level-high" : score >= 0.8 ? "level-mid" : "level-low";
       const labelSpan = document.createElement("span");
       labelSpan.textContent = label;
       const valueStrong = document.createElement("strong");
@@ -609,6 +633,6 @@ if (!IS_TEST) {
     formatEventLabel,
     getDomain,
     isInternalUrl,
-    getLatestEvent
+    getLatestEvent,
   };
 }

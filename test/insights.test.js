@@ -47,8 +47,16 @@ test("insights helpers and mirrors", () => {
 
   const focusSession = {
     nodes: {
-      a: { url: "https://example.com", activeMs: 10 * 60 * 1000, visitCount: 1 },
-      b: { url: "https://example.com/2", activeMs: 2 * 60 * 1000, visitCount: 1 },
+      a: {
+        url: "https://example.com",
+        activeMs: 10 * 60 * 1000,
+        visitCount: 1,
+      },
+      b: {
+        url: "https://example.com/2",
+        activeMs: 2 * 60 * 1000,
+        visitCount: 1,
+      },
     },
     navigationCount: 1,
     startedAt: clock.now(),
@@ -87,10 +95,7 @@ test("insights helpers and mirrors", () => {
     startedAt: lateNight.getTime(),
   };
   const lateMirror = hooks.buildSessionMirror(lateSession, null);
-  assert.equal(
-    lateMirror.summary,
-    "Late-night browsing loosened the pace.",
-  );
+  assert.equal(lateMirror.summary, "Late-night browsing loosened the pace.");
 
   const candidates = hooks.buildReasonCandidates(
     { shortSession: true },
@@ -183,10 +188,7 @@ test("insights coverage extras", () => {
   assert.equal(hooks.isLateNight(null), false);
   context.IRHTShared = sharedBackup;
   assert.equal(hooks.collectSessions({}).length, 0);
-  assert.equal(
-    hooks.generateInsights({ nodes: {} }, null).length,
-    0,
-  );
+  assert.equal(hooks.generateInsights({ nodes: {} }, null).length, 0);
 
   assert.equal(hooks.computeDriftMinutes({}), null);
   assert.equal(
@@ -202,7 +204,13 @@ test("insights coverage extras", () => {
     hooks.computeDriftMinutes({
       firstActivityAt: clock.now() - 60000,
       trapDoors: [{ url: "https://trap.com" }],
-      events: [{ ts: clock.now() - 30000, type: "navigation", toUrl: "https://trap.com" }],
+      events: [
+        {
+          ts: clock.now() - 30000,
+          type: "navigation",
+          toUrl: "https://trap.com",
+        },
+      ],
     }),
     1,
   );
@@ -210,8 +218,16 @@ test("insights coverage extras", () => {
     hooks.computeDriftMinutes({
       trapDoors: [{ url: "https://trap.com" }],
       events: [
-        { ts: clock.now() - 90000, type: "navigation", toUrl: "https://start.com" },
-        { ts: clock.now() - 30000, type: "navigation", toUrl: "https://trap.com" },
+        {
+          ts: clock.now() - 90000,
+          type: "navigation",
+          toUrl: "https://start.com",
+        },
+        {
+          ts: clock.now() - 30000,
+          type: "navigation",
+          toUrl: "https://trap.com",
+        },
       ],
     }),
     1,
@@ -327,11 +343,18 @@ test("insights drift, repetition, and typicals", () => {
   const session = {
     startedAt: clock.now() - 120000,
     events: [
-      { ts: clock.now() - 60000, type: "navigation", toUrl: "https://trap.com" },
+      {
+        ts: clock.now() - 60000,
+        type: "navigation",
+        toUrl: "https://trap.com",
+      },
     ],
     trapDoors: [{ url: "https://trap.com" }],
     nodes: {
-      "https://trap.com": { url: "https://trap.com", firstSeen: clock.now() - 40000 },
+      "https://trap.com": {
+        url: "https://trap.com",
+        firstSeen: clock.now() - 40000,
+      },
     },
   };
   assert.equal(hooks.computeDriftMinutes(session), 1);
@@ -406,7 +429,13 @@ test("insights coverage for empty and fallback branches", () => {
   const driftNoTrigger = hooks.computeDriftMinutes({
     startedAt: clock.now() - 60000,
     trapDoors: [{ url: "https://trap.com" }],
-    events: [{ ts: clock.now() - 59000, type: "navigation", toUrl: "https://other.com" }],
+    events: [
+      {
+        ts: clock.now() - 59000,
+        type: "navigation",
+        toUrl: "https://other.com",
+      },
+    ],
     nodes: {},
   });
   assert.equal(driftNoTrigger, null);
@@ -444,13 +473,18 @@ test("insights active time and start url branches", () => {
   const { hooks } = loadInsights();
   const session = {
     nodes: {
-      "https://example.com/": { url: "https://example.com/", activeMs: 1000, firstSeen: 5 },
+      "https://example.com/": {
+        url: "https://example.com/",
+        activeMs: 1000,
+        firstSeen: 5,
+      },
     },
-    events: [
-      { ts: 1, type: "URL_CHANGED", url: "https://start.com" },
-    ],
+    events: [{ ts: 1, type: "URL_CHANGED", url: "https://start.com" }],
   };
-  const tracking = { activeSince: Date.now() - 5000, activeUrl: "https://example.com/" };
+  const tracking = {
+    activeSince: Date.now() - 5000,
+    activeUrl: "https://example.com/",
+  };
   assert.ok(hooks.getSessionActiveMs(session, tracking) >= 1000);
   assert.equal(hooks.findSessionStartUrl({ nodes: {}, events: [] }), null);
   assert.equal(hooks.findSessionStartUrl(session), "https://start.com");
@@ -461,7 +495,11 @@ test("insights active time and fallback start url from nodes", () => {
   const { hooks } = loadInsights(clock);
   const session = {
     nodes: {
-      "https://late.com/": { url: "https://late.com/", activeMs: 60000, firstSeen: 10 },
+      "https://late.com/": {
+        url: "https://late.com/",
+        activeMs: 60000,
+        firstSeen: 10,
+      },
       "https://zero.com/": { url: "https://zero.com/", activeMs: 60000 },
     },
     events: [],
@@ -499,7 +537,9 @@ test("insights drift minutes and candidates branches", () => {
     firstActivityAt: 1000,
     trapDoors: [{ url: "https://trap.com/" }],
     events: [{ ts: 61000, type: "navigation", toUrl: "https://trap.com/" }],
-    nodes: { "https://trap.com/": { url: "https://trap.com/", firstSeen: 60000 } },
+    nodes: {
+      "https://trap.com/": { url: "https://trap.com/", firstSeen: 60000 },
+    },
   };
   assert.ok(hooks.computeDriftMinutes(session) > 0);
   const noTrigger = hooks.computeDriftMinutes({
@@ -587,11 +627,31 @@ test("insights new pattern detection: deepDive, scattered, tabExplosion", () => 
   // Deep dive: <=2 domains, >=5 pages, >=5min active
   const deepDiveSession = {
     nodes: {
-      a: { url: "https://docs.example.com/page1", activeMs: 120000, visitCount: 1 },
-      b: { url: "https://docs.example.com/page2", activeMs: 80000, visitCount: 1 },
-      c: { url: "https://docs.example.com/page3", activeMs: 60000, visitCount: 1 },
-      d: { url: "https://docs.example.com/page4", activeMs: 50000, visitCount: 1 },
-      e: { url: "https://docs.example.com/page5", activeMs: 40000, visitCount: 1 },
+      a: {
+        url: "https://docs.example.com/page1",
+        activeMs: 120000,
+        visitCount: 1,
+      },
+      b: {
+        url: "https://docs.example.com/page2",
+        activeMs: 80000,
+        visitCount: 1,
+      },
+      c: {
+        url: "https://docs.example.com/page3",
+        activeMs: 60000,
+        visitCount: 1,
+      },
+      d: {
+        url: "https://docs.example.com/page4",
+        activeMs: 50000,
+        visitCount: 1,
+      },
+      e: {
+        url: "https://docs.example.com/page5",
+        activeMs: 40000,
+        visitCount: 1,
+      },
     },
     navigationCount: 4,
     startedAt: clock.now(),
@@ -646,19 +706,49 @@ test("insights new pattern detection: deepDive, scattered, tabExplosion", () => 
     insightMixed: "Mixed",
   };
   const deepDiveCandidates = hooks.buildReasonCandidates(
-    { shortSession: false, focus: false, deepDive: true, feedLike: false, tabExplosion: false, wandering: false, scattered: false, looping: false, lateNight: false },
+    {
+      shortSession: false,
+      focus: false,
+      deepDive: true,
+      feedLike: false,
+      tabExplosion: false,
+      wandering: false,
+      scattered: false,
+      looping: false,
+      lateNight: false,
+    },
     copy,
   );
   assert.ok(deepDiveCandidates.some((c) => c.id === "deepDive"));
 
   const tabExplosionCandidates = hooks.buildReasonCandidates(
-    { shortSession: false, focus: false, deepDive: false, feedLike: false, tabExplosion: true, wandering: false, scattered: false, looping: false, lateNight: false },
+    {
+      shortSession: false,
+      focus: false,
+      deepDive: false,
+      feedLike: false,
+      tabExplosion: true,
+      wandering: false,
+      scattered: false,
+      looping: false,
+      lateNight: false,
+    },
     copy,
   );
   assert.ok(tabExplosionCandidates.some((c) => c.id === "tabExplosion"));
 
   const scatterCandidates = hooks.buildReasonCandidates(
-    { shortSession: false, focus: false, deepDive: false, feedLike: false, tabExplosion: false, wandering: false, scattered: true, looping: false, lateNight: false },
+    {
+      shortSession: false,
+      focus: false,
+      deepDive: false,
+      feedLike: false,
+      tabExplosion: false,
+      wandering: false,
+      scattered: true,
+      looping: false,
+      lateNight: false,
+    },
     copy,
   );
   assert.ok(scatterCandidates.some((c) => c.id === "scatter"));

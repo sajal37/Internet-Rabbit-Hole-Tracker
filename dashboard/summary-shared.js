@@ -12,14 +12,18 @@
     const getSessionActiveMs = options.getSessionActiveMs || (() => 0);
     const getDomain = options.getDomain || (() => "");
     const truncate = options.truncate || ((value) => value);
-    const topDomains = Array.isArray(options.topDomains) ? options.topDomains : [];
+    const topDomains = Array.isArray(options.topDomains)
+      ? options.topDomains
+      : [];
     const categoryTotals = options.categoryTotals || {};
     const trapDoor = options.trapDoor || null;
 
     const totalActiveMs = getSessionActiveMs(session, tracking);
     const isInternal = options.isInternalUrl || (() => false);
     const allNodeUrls = Object.values(session.nodes || {});
-    const pageCount = allNodeUrls.filter((n) => !isInternal(n.url)).length || allNodeUrls.length;
+    const pageCount =
+      allNodeUrls.filter((n) => !isInternal(n.url)).length ||
+      allNodeUrls.length;
     const navigationCount = session.navigationCount || 0;
     const sessionStartUrl = options.sessionStartUrl || "";
     const sessionStartDomain = options.sessionStartDomain || "";
