@@ -267,6 +267,16 @@ function getDistractionLabel(normalizedScore) {
     : "Focused";
 }
 
+function isInternalUrl(url) {
+  if (globalThis.IRHTShared?.isInternalUrl) {
+    return globalThis.IRHTShared.isInternalUrl(url);
+  }
+  if (!url || typeof url !== "string") {
+    return false;
+  }
+  return /^(chrome(-extension)?|about|edge|brave|moz-extension|extension):/i.test(url);
+}
+
 function getDomain(url) {
   return globalThis.IRHTShared?.getDomain
     ? globalThis.IRHTShared.getDomain(url)
@@ -291,6 +301,9 @@ function buildPopupMetrics(state) {
   const nodes = Object.values(session.nodes || {});
   let activeMs = nodes.reduce((sum, node) => sum + (node.activeMs || 0), 0);
   const domainTotals = nodes.reduce((acc, node) => {
+    if (isInternalUrl(node.url)) {
+      return acc;
+    }
     const domain = getDomain(node.url);
     if (!domain) {
       return acc;
@@ -595,6 +608,7 @@ if (!IS_TEST) {
     formatDuration,
     formatEventLabel,
     getDomain,
+    isInternalUrl,
     getLatestEvent
   };
 }

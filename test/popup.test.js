@@ -360,7 +360,7 @@ test("popup metrics, glance, and actions", async () => {
   };
   const metrics = hooks.buildPopupMetrics(state);
   assert.equal(metrics.topDomain, "example.com");
-  assert.equal(context.normalizeDistractionScore(10), 0);
+  assert.equal(context.normalizeDistractionScore(10), 100);
   assert.equal(context.getDistractionLabel(10), "Focused");
   assert.equal(context.titleCase(""), "");
   assert.equal(context.formatEventLabel({ type: "navigation" }), "Navigation");

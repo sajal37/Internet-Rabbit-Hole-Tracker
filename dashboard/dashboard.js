@@ -24,7 +24,7 @@ const GRAPH_DEFAULTS = {
   colorBy: "activity",
   search: "",
 };
-const OLLAMA_ENDPOINT = "http://localhost:3010/analyze";
+const OLLAMA_ENDPOINT = "http://localhost:3000/analyze";
 const OLLAMA_MODEL = "llama3";
 const DIRECT_OLLAMA_ENDPOINT = "http://localhost:11434/api/generate";
 const PALETTE = [
@@ -114,8 +114,156 @@ const IS_TEST =
   typeof globalThis !== "undefined" && globalThis.__IRHT_TEST__ === true;
 
 const CATEGORY_RULES = globalThis.IRHTCategories?.CATEGORY_RULES || [];
-const CATEGORY_MULTIPLIERS = globalThis.IRHTCategories?.CATEGORY_MULTIPLIERS || {};
+const CATEGORY_MULTIPLIERS =
+  globalThis.IRHTCategories?.CATEGORY_MULTIPLIERS || {};
 const CATEGORY_LIST = globalThis.IRHTCategories?.CATEGORY_LIST || [];
+
+// Shared utility accessors — delegates to IRHTShared loaded from shared.js
+function isInternalUrl(url) {
+  if (globalThis.IRHTShared?.isInternalUrl) {
+    return globalThis.IRHTShared.isInternalUrl(url);
+  }
+  if (!url || typeof url !== "string") {
+    return false;
+  }
+  return /^(chrome(-extension)?|about|edge|brave|moz-extension|extension):/i.test(url);
+}
+function getDomain(url) {
+  return globalThis.IRHTShared?.getDomain
+    ? globalThis.IRHTShared.getDomain(url)
+    : null;
+}
+function formatDuration(ms) {
+  if (globalThis.IRHTShared?.formatDuration) {
+    return globalThis.IRHTShared.formatDuration(ms);
+  }
+  const totalSeconds = Math.max(0, Math.floor((ms || 0) / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+  if (minutes > 0) {
+    return `${minutes}m ${seconds}s`;
+  }
+  return `${seconds}s`;
+}
+function getSessionActiveMs(session, tracking) {
+  return globalThis.IRHTShared?.getSessionActiveMs
+    ? globalThis.IRHTShared.getSessionActiveMs(session, tracking, {
+        preferMetrics: true,
+      })
+    : 0;
+}
+function getSessionEvents(session) {
+  return globalThis.IRHTShared?.getSessionEvents
+    ? globalThis.IRHTShared.getSessionEvents(session)
+    : session?.events || [];
+}
+function findSessionStartUrl(session) {
+  if (globalThis.IRHTShared?.findSessionStartUrl) {
+    return globalThis.IRHTShared.findSessionStartUrl(session);
+  }
+  if (!session) {
+    return null;
+  }
+  const events = getSessionEvents(session)
+    .slice()
+    .sort((a, b) => (a?.ts || 0) - (b?.ts || 0));
+  for (const event of events) {
+    if (event?.type === "navigation" && event.toUrl && !isInternalUrl(event.toUrl)) {
+      return event.toUrl;
+    }
+    if (
+      (event?.type === "TAB_ACTIVE" || event?.type === "URL_CHANGED") &&
+      event.url && !isInternalUrl(event.url)
+    ) {
+      return event.url;
+    }
+  }
+  const nodes = Object.values(session.nodes || {})
+    .filter((n) => n.url && !isInternalUrl(n.url));
+  if (!nodes.length) {
+    return null;
+  }
+  nodes.sort((a, b) => (a.firstSeen || 0) - (b.firstSeen || 0));
+  return nodes[0].url || null;
+}
+function buildTopDomains(session) {
+  return globalThis.IRHTShared?.buildTopDomains
+    ? globalThis.IRHTShared.buildTopDomains(session)
+    : [];
+}
+function isLateNight(timestamp) {
+  return globalThis.IRHTShared?.isLateNight
+    ? globalThis.IRHTShared.isLateNight(timestamp)
+    : false;
+}
+function matchesDomain(host, pattern) {
+  return globalThis.IRHTShared?.matchesDomain
+    ? globalThis.IRHTShared.matchesDomain(host, pattern)
+    : false;
+}
+function isTechnicalUrl(url) {
+  return globalThis.IRHTShared?.isTechnicalUrl
+    ? globalThis.IRHTShared.isTechnicalUrl(url)
+    : false;
+}
+function normalizeDistractionScore(score) {
+  return globalThis.IRHTShared?.normalizeDistractionScore
+    ? globalThis.IRHTShared.normalizeDistractionScore(score)
+    : 0;
+}
+function getDistractionLabel(score) {
+  return globalThis.IRHTShared?.getDistractionLabel
+    ? globalThis.IRHTShared.getDistractionLabel(score)
+    : "Focused";
+}
+function computeDistractionScore(node, session, options) {
+  return globalThis.IRHTShared?.computeDistractionScore
+    ? globalThis.IRHTShared.computeDistractionScore(node, session, options)
+    : { score: 0, components: {} };
+}
+function computeSessionSignals(session) {
+  return globalThis.IRHTShared?.computeSessionSignals
+    ? globalThis.IRHTShared.computeSessionSignals(session)
+    : {};
+}
+function computeIntentDrift(session, options) {
+  return globalThis.IRHTShared?.computeIntentDrift
+    ? globalThis.IRHTShared.computeIntentDrift(session, options)
+    : {
+        score: 0,
+        label: "Unknown",
+        reason: "",
+        confidence: "low",
+        drivers: [],
+      };
+}
+function getLatestEvent(session) {
+  return globalThis.IRHTShared?.getLatestEvent
+    ? globalThis.IRHTShared.getLatestEvent(session)
+    : null;
+}
+function matchHostToList(host, list) {
+  return globalThis.IRHTShared?.matchHostToList
+    ? globalThis.IRHTShared.matchHostToList(host, list)
+    : false;
+}
+
+function applyIntentDrift(session, options) {
+  if (!session) {
+    return;
+  }
+  const result = computeIntentDrift(session, options || {});
+  session.intentDriftScore = result.score;
+  session.intentDriftLabel = result.label;
+  session.intentDriftReason = result.reason;
+  session.intentDriftConfidence = result.confidence;
+  session.intentDriftDrivers = result.drivers;
+}
+
 const THEME_LIST = ["warm", "ink", "forest", "retro", "paper", "noir"];
 const POPUP_LAYOUTS = ["stack", "cards", "focus"];
 const POPUP_DENSITIES = ["compact", "roomy"];
@@ -243,7 +391,9 @@ const elements = {
     "setting-summary-personality",
   ),
   settingSummaryEmojis: document.getElementById("setting-summary-emojis"),
-  settingSummaryFormatting: document.getElementById("setting-summary-formatting"),
+  settingSummaryFormatting: document.getElementById(
+    "setting-summary-formatting",
+  ),
   settingSummaryBullets: document.getElementById("setting-summary-bullets"),
   settingSummaryMetaphors: document.getElementById("setting-summary-metaphors"),
   settingSummaryLength: document.getElementById("setting-summary-length"),
@@ -256,7 +406,9 @@ const elements = {
   settingSummaryCache: document.getElementById("setting-summary-cache"),
   settingOllamaEndpoint: document.getElementById("setting-ollama-endpoint"),
   settingOllamaModel: document.getElementById("setting-ollama-model"),
-  settingRealtimeStreamEnabled: document.getElementById("setting-realtime-stream"),
+  settingRealtimeStreamEnabled: document.getElementById(
+    "setting-realtime-stream",
+  ),
   settingRealtimeDeltaSync: document.getElementById("setting-realtime-delta"),
   settingRealtimePortPush: document.getElementById("setting-realtime-push"),
   settingRealtimeLiveTimers: document.getElementById(
@@ -304,12 +456,16 @@ const elements = {
   settingDashboardStoryMode: document.getElementById(
     "setting-dashboard-story-mode",
   ),
-  settingSessionListStyle: document.getElementById("setting-session-list-style"),
-  settingPinActiveSession: document.getElementById("setting-pin-active-session"),
-    settingFocusPrompts: document.getElementById("setting-focus-prompts"),
-    settingOutcomeHighlights: document.getElementById(
-      "setting-outcome-highlights",
-    ),
+  settingSessionListStyle: document.getElementById(
+    "setting-session-list-style",
+  ),
+  settingPinActiveSession: document.getElementById(
+    "setting-pin-active-session",
+  ),
+  settingFocusPrompts: document.getElementById("setting-focus-prompts"),
+  settingOutcomeHighlights: document.getElementById(
+    "setting-outcome-highlights",
+  ),
   settingDashboardShowOverview: document.getElementById(
     "setting-dashboard-show-overview",
   ),
@@ -578,8 +734,6 @@ function bindControls() {
     elements.toastAction.addEventListener("click", handleToastAction);
   }
 
-
-
   if (elements.sessionDelete) {
     elements.sessionDelete.addEventListener("click", () => {
       const sessionId = app.session?.id;
@@ -594,24 +748,19 @@ function bindControls() {
       }
       sendSessionAction("session_delete", sessionId);
       scheduleRealtimeReconcile();
-      showToast(
-        "Session deleted.",
-        "Undo",
-        () => {
-          if (app.settings.realtimeOptimisticUi) {
-            applyOptimisticRestore(sessionId);
-          }
-          sendSessionAction("session_restore", sessionId);
-          scheduleRealtimeReconcile();
-          showToast("Delete undone.");
-        },
-      );
+      showToast("Session deleted.", "Undo", () => {
+        if (app.settings.realtimeOptimisticUi) {
+          applyOptimisticRestore(sessionId);
+        }
+        sendSessionAction("session_restore", sessionId);
+        scheduleRealtimeReconcile();
+        showToast("Delete undone.");
+      });
     });
   }
   if (elements.sessionFilterFavorites) {
     elements.sessionFilterFavorites.addEventListener("change", () => {
-      app.sessionFilterFavoritesOnly =
-        elements.sessionFilterFavorites.checked;
+      app.sessionFilterFavoritesOnly = elements.sessionFilterFavorites.checked;
       populateSessionList();
     });
   }
@@ -1332,7 +1481,10 @@ function populateSessionList() {
   elements.sessionList.dataset.style = data.listStyle;
   const pinActiveSession =
     app.settings?.pinActiveSession ?? DEFAULT_SETTINGS.pinActiveSession;
-  const activeId = app.state?.activeSessionId || data.ordered.find((session) => !session.endedAt)?.id || null;
+  const activeId =
+    app.state?.activeSessionId ||
+    data.ordered.find((session) => !session.endedAt)?.id ||
+    null;
   if (pinActiveSession && app.cache.sessionListAutoScrollId !== activeId) {
     app.cache.sessionListAutoScrollId = activeId;
     app.cache.sessionListAutoScrollDone = false;
@@ -1380,9 +1532,7 @@ function getSessionListData() {
     activeId = activeSession?.id || "";
   }
   if (activeId && pinActiveSession) {
-    const activeIndex = ordered.findIndex(
-      (session) => session.id === activeId,
-    );
+    const activeIndex = ordered.findIndex((session) => session.id === activeId);
     if (activeIndex > 0) {
       const [active] = ordered.splice(activeIndex, 1);
       ordered.unshift(active);
@@ -1445,12 +1595,18 @@ function renderSessionListWindow() {
     elements.sessionListEmpty.hidden = ordered.length > 0;
   }
   const container = elements.sessionList;
-  if (!app.cache.sessionListAutoScrollDone && app.cache.sessionListAutoScrollId) {
+  if (
+    !app.cache.sessionListAutoScrollDone &&
+    app.cache.sessionListAutoScrollId
+  ) {
     const activeIndex = ordered.findIndex(
       (session) => session.id === app.cache.sessionListAutoScrollId,
     );
     if (activeIndex >= 0) {
-      container.scrollTop = Math.max(0, activeIndex * SESSION_LIST_ITEM_ESTIMATE);
+      container.scrollTop = Math.max(
+        0,
+        activeIndex * SESSION_LIST_ITEM_ESTIMATE,
+      );
       app.cache.sessionListAutoScrollDone = true;
     }
   }
@@ -1471,10 +1627,7 @@ function renderSessionListWindow() {
     favorite.type = "button";
     favorite.className = "session-favorite";
     favorite.dataset.favorite = session.favorite ? "true" : "false";
-    favorite.setAttribute(
-      "aria-pressed",
-      session.favorite ? "true" : "false",
-    );
+    favorite.setAttribute("aria-pressed", session.favorite ? "true" : "false");
     favorite.setAttribute(
       "aria-label",
       session.favorite ? "Remove from favorites" : "Save to favorites",
@@ -1513,10 +1666,7 @@ function renderSessionListWindow() {
         return;
       }
       favorite.dataset.favorite = nextFavorite ? "true" : "false";
-      favorite.setAttribute(
-        "aria-pressed",
-        nextFavorite ? "true" : "false",
-      );
+      favorite.setAttribute("aria-pressed", nextFavorite ? "true" : "false");
       favorite.setAttribute(
         "aria-label",
         nextFavorite ? "Remove from favorites" : "Save to favorites",
@@ -2328,7 +2478,10 @@ async function refreshSummaries({ force }) {
 
   try {
     const briefPrompt = await buildSummaryPromptAsync(app.session, "brief");
-    const detailedPrompt = await buildSummaryPromptAsync(app.session, "detailed");
+    const detailedPrompt = await buildSummaryPromptAsync(
+      app.session,
+      "detailed",
+    );
     const sendPrompt = getSendPromptToOllama();
     const [brief, detailed] = await Promise.all([
       sendPrompt(briefPrompt),
@@ -2337,11 +2490,7 @@ async function refreshSummaries({ force }) {
     if (app.summaryState.requestId !== requestId) {
       return;
     }
-    app.summaryState.brief = coerceSummaryText(
-      brief,
-      "brief",
-      app.session,
-    );
+    app.summaryState.brief = coerceSummaryText(brief, "brief", app.session);
     app.summaryState.detailed = coerceSummaryText(
       detailed,
       "detailed",
@@ -2512,6 +2661,7 @@ function buildSummaryDataLines(state, session) {
     trapDoor,
     sessionStartUrl,
     sessionStartDomain,
+    isInternalUrl,
     formatSessionRange,
     formatDuration,
     getSessionActiveMs,
@@ -2601,15 +2751,18 @@ function buildSummaryVoiceLine(detailLevel) {
   const voiceMap = {
     friend: {
       brief: "smart friend who explains things simply",
-      detailed: "smart friend who noticed patterns and is explaining them back clearly",
+      detailed:
+        "smart friend who noticed patterns and is explaining them back clearly",
     },
     mentor: {
       brief: "supportive mentor who explains things simply",
-      detailed: "thoughtful mentor who noticed patterns and is explaining them back clearly",
+      detailed:
+        "thoughtful mentor who noticed patterns and is explaining them back clearly",
     },
     analyst: {
       brief: "clear analyst who explains things simply",
-      detailed: "observant analyst who noticed patterns and is explaining them back clearly",
+      detailed:
+        "observant analyst who noticed patterns and is explaining them back clearly",
     },
   };
   const label = voiceMap[voice] || voiceMap.friend;
@@ -2633,7 +2786,8 @@ function buildSummaryPersonalityLine(detailLevel) {
     },
     balanced: {
       brief: "human, encouraging, and a little playful when it fits",
-      detailed: "encouraging, observant, and casual (not formal, not corporate)",
+      detailed:
+        "encouraging, observant, and casual (not formal, not corporate)",
     },
   };
   const label = personalityMap[personality] || personalityMap.balanced;
@@ -2758,7 +2912,9 @@ function getSummaryBaseLines(detailLevel) {
 
 function buildSummaryPrompt(session, detailLevel) {
   const baseLines = getSummaryBaseLines(detailLevel);
-  return [...baseLines, ...buildSummaryDataLines(app.state, session)].join("\n");
+  return [...baseLines, ...buildSummaryDataLines(app.state, session)].join(
+    "\n",
+  );
 }
 
 async function buildSummaryPromptAsync(session, detailLevel) {
@@ -2830,8 +2986,13 @@ function renderStatus() {
     return;
   }
   const totalActiveMs = getLiveActiveMs(app.session, app.state?.tracking);
-  const pageCount = Object.keys(app.session.nodes || {}).length;
-  const edgeCount = Object.keys(app.session.edges || {}).length;
+  const nodes = Object.values(app.session.nodes || {});
+  const pageCount = nodes.filter((n) => !isInternalUrl(n.url)).length || nodes.length;
+  const edges = Object.entries(app.session.edges || {});
+  const edgeCount = edges.filter(([key]) => {
+    const parts = key.split(" -> ");
+    return !isInternalUrl(parts[0]) && !isInternalUrl(parts[1]);
+  }).length;
   const rangeText = formatSessionRange(app.session);
 
   elements.sessionRange.textContent = rangeText;
@@ -3183,15 +3344,13 @@ function renderStatsWithData(stats, totalActiveMs) {
     topDomains.slice(0, 5),
     (item) => item.domain,
   );
-  renderRankList(
-    elements.topPages,
-    topPages.slice(0, 5),
-    (item) => item.url,
+  renderRankList(elements.topPages, topPages.slice(0, 5), (item) =>
+    truncate(getDomain(item.url) || item.url, 40),
   );
   renderRankList(
     elements.topDistractions,
     topDistractions.slice(0, 5),
-    (item) => item.url,
+    (item) => truncate(getDomain(item.url) || item.url, 40),
     (item) => formatDuration(item.activeMs),
   );
 
@@ -3541,7 +3700,10 @@ function mergeRealtimeDelta(base, next) {
   return {
     sessionId: next.sessionId ?? base.sessionId,
     tracking: { ...(base.tracking || {}), ...(next.tracking || {}) },
-    sessionPatch: { ...(base.sessionPatch || {}), ...(next.sessionPatch || {}) },
+    sessionPatch: {
+      ...(base.sessionPatch || {}),
+      ...(next.sessionPatch || {}),
+    },
     sessionsPatch: [
       ...(base.sessionsPatch || []),
       ...(next.sessionsPatch || []),
@@ -3602,7 +3764,10 @@ function applyStateDelta(delta) {
     if (delta.nodePatch && delta.nodePatch.url) {
       const url = delta.nodePatch.url;
       session.nodes = session.nodes || {};
-      session.nodes[url] = { ...(session.nodes[url] || {}), ...delta.nodePatch };
+      session.nodes[url] = {
+        ...(session.nodes[url] || {}),
+        ...delta.nodePatch,
+      };
     }
     if (delta.edgePatch && delta.edgePatch.id) {
       session.edges = session.edges || {};
@@ -3711,14 +3876,17 @@ function applyPriorityUpdate() {
     elements.totalActive.textContent = formatDuration(totalActiveMs);
   }
   if (elements.pageCount) {
-    elements.pageCount.textContent = String(
-      Object.keys(session.nodes || {}).length,
-    );
+    const allNodes = Object.values(session.nodes || {});
+    const visibleCount = allNodes.filter((n) => !isInternalUrl(n.url)).length || allNodes.length;
+    elements.pageCount.textContent = String(visibleCount);
   }
   if (elements.edgeCount) {
-    elements.edgeCount.textContent = String(
-      Object.keys(session.edges || {}).length,
-    );
+    const allEdges = Object.entries(session.edges || {});
+    const visibleEdges = allEdges.filter(([key]) => {
+      const parts = key.split(" -> ");
+      return !isInternalUrl(parts[0]) && !isInternalUrl(parts[1]);
+    }).length;
+    elements.edgeCount.textContent = String(visibleEdges);
   }
   if (elements.sessionLabel) {
     elements.sessionLabel.textContent = session.label || "-";
@@ -3739,7 +3907,10 @@ function scheduleDeferredRender() {
 }
 
 function scheduleFrameRender(key, renderFn) {
-  if (!app.settings?.realtimeFrameAligned || typeof requestAnimationFrame !== "function") {
+  if (
+    !app.settings?.realtimeFrameAligned ||
+    typeof requestAnimationFrame !== "function"
+  ) {
     renderFn();
     return;
   }
@@ -4056,9 +4227,7 @@ function shouldForceSummaryRefresh(prevSettings, nextSettings) {
     "summaryLength",
     "summaryVerbosity",
   ];
-  return summaryKeys.some(
-    (key) => prevSettings[key] !== nextSettings[key],
-  );
+  return summaryKeys.some((key) => prevSettings[key] !== nextSettings[key]);
 }
 
 function applySettings(settings) {
@@ -4208,8 +4377,7 @@ function renderSettings() {
       !!app.settings.realtimeDeltaSync;
   }
   if (elements.settingRealtimePortPush) {
-    elements.settingRealtimePortPush.checked =
-      !!app.settings.realtimePortPush;
+    elements.settingRealtimePortPush.checked = !!app.settings.realtimePortPush;
   }
   if (elements.settingRealtimeLiveTimers) {
     elements.settingRealtimeLiveTimers.checked =
@@ -4221,7 +4389,8 @@ function renderSettings() {
   }
   if (elements.settingRealtimeBatchWindow) {
     elements.settingRealtimeBatchWindow.value =
-      app.settings.realtimeBatchWindowMs ?? DEFAULT_SETTINGS.realtimeBatchWindowMs;
+      app.settings.realtimeBatchWindowMs ??
+      DEFAULT_SETTINGS.realtimeBatchWindowMs;
   }
   if (elements.settingRealtimePriorityUpdates) {
     elements.settingRealtimePriorityUpdates.checked =
@@ -4304,14 +4473,14 @@ function renderSettings() {
       app.settings.focusPrompts,
     );
   }
-    if (elements.settingOutcomeHighlights) {
-      elements.settingOutcomeHighlights.checked =
-        !!app.settings.showOutcomeHighlights;
-    }
-    if (elements.settingDashboardShowOverview) {
-      elements.settingDashboardShowOverview.checked =
-        !!app.settings.dashboardSections?.overview;
-    }
+  if (elements.settingOutcomeHighlights) {
+    elements.settingOutcomeHighlights.checked =
+      !!app.settings.showOutcomeHighlights;
+  }
+  if (elements.settingDashboardShowOverview) {
+    elements.settingDashboardShowOverview.checked =
+      !!app.settings.dashboardSections?.overview;
+  }
   if (elements.settingDashboardShowSessions) {
     elements.settingDashboardShowSessions.checked =
       !!app.settings.dashboardSections?.sessions;
@@ -4530,7 +4699,9 @@ function collectSettingsFromForm() {
     draft.trackingPaused = elements.settingTrackingPaused.checked;
   }
   if (elements.settingProductiveSites) {
-    draft.productiveSites = parseSiteList(elements.settingProductiveSites.value);
+    draft.productiveSites = parseSiteList(
+      elements.settingProductiveSites.value,
+    );
   }
   if (elements.settingDistractingSites) {
     draft.distractingSites = parseSiteList(
@@ -4552,8 +4723,7 @@ function collectSettingsFromForm() {
     draft.intentDriftAlerts = elements.settingIntentDriftAlerts.checked;
   }
   if (elements.settingIntentDriftSensitivity) {
-    draft.intentDriftSensitivity =
-      elements.settingIntentDriftSensitivity.value;
+    draft.intentDriftSensitivity = elements.settingIntentDriftSensitivity.value;
   }
   if (elements.settingSummaryAutoRefresh) {
     draft.summaryAutoRefresh = elements.settingSummaryAutoRefresh.checked;
@@ -4627,8 +4797,7 @@ function collectSettingsFromForm() {
     draft.realtimeOptimisticUi = elements.settingRealtimeOptimisticUi.checked;
   }
   if (elements.settingRealtimeWorkerOffload) {
-    draft.realtimeWorkerOffload =
-      elements.settingRealtimeWorkerOffload.checked;
+    draft.realtimeWorkerOffload = elements.settingRealtimeWorkerOffload.checked;
   }
   if (elements.settingRealtimeFrameAligned) {
     draft.realtimeFrameAligned = elements.settingRealtimeFrameAligned.checked;
@@ -4669,12 +4838,12 @@ function collectSettingsFromForm() {
   if (elements.settingFocusPrompts) {
     draft.focusPrompts = elements.settingFocusPrompts.value;
   }
-    if (elements.settingOutcomeHighlights) {
-      draft.showOutcomeHighlights = elements.settingOutcomeHighlights.checked;
-    }
-    if (elements.settingAccentColor) {
-      draft.accentColor = elements.settingAccentColor.value;
-    }
+  if (elements.settingOutcomeHighlights) {
+    draft.showOutcomeHighlights = elements.settingOutcomeHighlights.checked;
+  }
+  if (elements.settingAccentColor) {
+    draft.accentColor = elements.settingAccentColor.value;
+  }
   if (elements.settingTypographyStyle) {
     draft.typographyStyle = elements.settingTypographyStyle.value;
   }
@@ -4955,12 +5124,12 @@ function sanitizeSettings(settings) {
     SESSION_LIST_STYLES,
     DEFAULT_SETTINGS.sessionListStyle,
   );
-    next.pinActiveSession = !!next.pinActiveSession;
-    next.focusPrompts = normalizeTextList(next.focusPrompts, 10, 120);
-    next.showOutcomeHighlights = !!next.showOutcomeHighlights;
-    const sectionDefaults = DEFAULT_SETTINGS.dashboardSections;
-    const incomingSections =
-      next.dashboardSections && typeof next.dashboardSections === "object"
+  next.pinActiveSession = !!next.pinActiveSession;
+  next.focusPrompts = normalizeTextList(next.focusPrompts, 10, 120);
+  next.showOutcomeHighlights = !!next.showOutcomeHighlights;
+  const sectionDefaults = DEFAULT_SETTINGS.dashboardSections;
+  const incomingSections =
+    next.dashboardSections && typeof next.dashboardSections === "object"
       ? next.dashboardSections
       : {};
   next.dashboardSections = {
@@ -5276,8 +5445,7 @@ function accentInkColor(hex) {
   if (!rgb) {
     return "";
   }
-  const luminance =
-    (0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b) / 255;
+  const luminance = (0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b) / 255;
   return luminance > 0.6 ? "#1f1a17" : "#fdf6ef";
 }
 
@@ -5305,10 +5473,7 @@ function applyUiSettings(settings) {
   const density = settings?.uiDensity === "compact" ? "compact" : "comfortable";
   document.body.classList.toggle("ui-compact", density === "compact");
   document.body.classList.toggle("reduce-motion", !!settings?.reduceMotion);
-  document.body.classList.toggle(
-    "story-mode",
-    !!settings?.dashboardStoryMode,
-  );
+  document.body.classList.toggle("story-mode", !!settings?.dashboardStoryMode);
   document.body.classList.toggle(
     "typo-bold",
     settings?.typographyStyle === "bold",
@@ -5345,19 +5510,19 @@ function applyAccentColor(settings) {
   }
 }
 
-  function applyDashboardVisibility(settings) {
-    const sections =
-      settings?.dashboardSections || DEFAULT_SETTINGS.dashboardSections;
-    const graphEnabled = !!sections.graph;
-    if (elements.summaryCard) {
-      elements.summaryCard.hidden = !sections.overview;
-    }
-    if (elements.detailCard) {
-      elements.detailCard.hidden = !sections.overview;
-    }
-    if (elements.overviewPanel) {
-      elements.overviewPanel.hidden = !sections.overview;
-    }
+function applyDashboardVisibility(settings) {
+  const sections =
+    settings?.dashboardSections || DEFAULT_SETTINGS.dashboardSections;
+  const graphEnabled = !!sections.graph;
+  if (elements.summaryCard) {
+    elements.summaryCard.hidden = !sections.overview;
+  }
+  if (elements.detailCard) {
+    elements.detailCard.hidden = !sections.overview;
+  }
+  if (elements.overviewPanel) {
+    elements.overviewPanel.hidden = !sections.overview;
+  }
   if (elements.sessionPanel) {
     elements.sessionPanel.hidden = !sections.sessions;
   }
@@ -5371,7 +5536,10 @@ function applyAccentColor(settings) {
     elements.sessionCalendar.hidden = !sections.sessions;
   }
   if (elements.sessionList) {
-    elements.sessionList.classList.toggle("favorites-hidden", !sections.sessions);
+    elements.sessionList.classList.toggle(
+      "favorites-hidden",
+      !sections.sessions,
+    );
   }
   if (elements.sessionFilterFavorites && !sections.sessions) {
     elements.sessionFilterFavorites.checked = false;
@@ -5520,6 +5688,779 @@ function sendSummaryUpdate(sessionId, brief, detailed, summaryUpdatedAt) {
     },
   );
   return true;
+}
+
+// ─── Missing utility functions ──────────────────────────────────────────────
+
+function formatDateKey(timestamp) {
+  if (typeof timestamp === "string") {
+    const parsed = Date.parse(timestamp);
+    if (!Number.isFinite(parsed)) {
+      return "";
+    }
+    timestamp = parsed;
+  }
+  if (!Number.isFinite(timestamp) || timestamp <= 0 || timestamp > 1e16) {
+    return "";
+  }
+  try {
+    const d = new Date(timestamp);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  } catch (_) {
+    return "";
+  }
+}
+
+function formatDateKeyForDisplay(key) {
+  if (!key || typeof key !== "string") {
+    return "that date";
+  }
+  const parts = key.split("-").map(Number);
+  if (parts.length < 3 || parts.some((p) => !Number.isFinite(p) || p <= 0)) {
+    return "that date";
+  }
+  try {
+    const d = new Date(parts[0], parts[1] - 1, parts[2]);
+    if (!Number.isFinite(d.getTime())) {
+      return "that date";
+    }
+    return d.toLocaleDateString(undefined, {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  } catch (_) {
+    return "that date";
+  }
+}
+
+function buildSessionMeta(session) {
+  if (!session) {
+    return "";
+  }
+  const parts = [];
+  const activeMs = getSessionActiveMs(session, null);
+  if (activeMs > 0) {
+    parts.push(formatDuration(activeMs));
+  }
+  const nodeCount = Object.keys(session.nodes || {}).length;
+  if (nodeCount > 0) {
+    parts.push(`${nodeCount} page${nodeCount === 1 ? "" : "s"}`);
+  }
+  if (session.label) {
+    parts.push(session.label);
+  }
+  return parts.join(" · ");
+}
+
+function updateRankListVisibility(container, totalItems) {
+  if (!container) {
+    return;
+  }
+  const limit = parseInt(container.dataset.limit, 10) || 0;
+  const items = container.querySelectorAll(".rank-item");
+  items.forEach((item, index) => {
+    if (limit > 0 && index >= limit && container.dataset.collapsed === "true") {
+      item.classList.add("is-hidden");
+    } else {
+      item.classList.remove("is-hidden");
+    }
+  });
+  const toggleId = container.id;
+  if (!toggleId) {
+    return;
+  }
+  const toggle = container
+    .closest(".rank-block")
+    ?.querySelector(`.rank-toggle[data-target="${toggleId}"]`);
+  if (!toggle) {
+    return;
+  }
+  toggle.hidden = totalItems <= limit;
+}
+
+function findSessionByDateKey(dateKey) {
+  if (!dateKey || !app.state?.sessions) {
+    return null;
+  }
+  const sessions = Object.values(app.state.sessions).filter(
+    (s) => s && !s.deleted,
+  );
+  for (const session of sessions) {
+    if (formatDateKey(session.startedAt) === dateKey) {
+      return session;
+    }
+  }
+  return null;
+}
+
+function truncate(value, max) {
+  if (!value || typeof value !== "string") {
+    return "";
+  }
+  if (!max || max < 4) {
+    return value.slice(0, max || 0);
+  }
+  return value.length <= max ? value : value.slice(0, max - 3) + "...";
+}
+
+function formatDate(timestamp) {
+  if (!Number.isFinite(timestamp)) {
+    return "Unknown date";
+  }
+  try {
+    return new Date(timestamp).toLocaleString();
+  } catch (_) {
+    return "Unknown date";
+  }
+}
+
+function formatTime(timestamp) {
+  if (!Number.isFinite(timestamp)) {
+    return "-";
+  }
+  try {
+    return new Date(timestamp).toLocaleTimeString();
+  } catch (_) {
+    return "-";
+  }
+}
+
+function formatSessionDay(timestamp) {
+  if (!Number.isFinite(timestamp) || timestamp > 1e16 || timestamp < 0) {
+    return "Unknown date";
+  }
+  try {
+    return new Date(timestamp).toLocaleDateString(undefined, {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  } catch (_) {
+    return "Unknown date";
+  }
+}
+
+function formatSessionRange(session) {
+  if (!session) {
+    return "No session";
+  }
+  const start = Number.isFinite(session.startedAt)
+    ? formatDate(session.startedAt)
+    : "Unknown";
+  const endTs = session._displayEndAt || session.endedAt;
+  const end = Number.isFinite(endTs) ? formatDate(endTs) : "Active";
+  return `${start} → ${end}`;
+}
+
+function formatSessionLabel(session) {
+  if (!session) {
+    return "Unknown session";
+  }
+  const day = Number.isFinite(session.startedAt)
+    ? formatSessionDay(session.startedAt)
+    : "Unknown date";
+  const suffix = session.archived ? " (archived)" : "";
+  return `${day}${suffix}`;
+}
+
+function formatScore(score) {
+  if (!Number.isFinite(score)) {
+    return "-";
+  }
+  return score.toFixed(1);
+}
+
+function formatPathNode(url) {
+  if (!url || typeof url !== "string") {
+    return "-";
+  }
+  const domain = getDomain(url);
+  return domain || truncate(url, 40);
+}
+
+function classifyUrl(url) {
+  if (!url || typeof url !== "string") {
+    return "Random";
+  }
+  let host = null;
+  try {
+    host = new URL(url).hostname.toLowerCase().replace(/^www\./, "");
+  } catch (_) {
+    return "Random";
+  }
+  if (!host) {
+    return "Random";
+  }
+  const override = getCategoryOverride(host);
+  if (override) {
+    return override;
+  }
+  // TLD-based heuristics
+  if (host.endsWith(".edu") || host.includes(".edu.")) {
+    return "Study";
+  }
+  if (host.endsWith(".gov") || host.includes(".gov.")) {
+    return "News";
+  }
+  if (host.startsWith("news.")) {
+    return "News";
+  }
+  for (const rule of CATEGORY_RULES) {
+    for (const domain of rule.domains) {
+      if (host === domain || host.endsWith(`.${domain}`)) {
+        return rule.category;
+      }
+    }
+  }
+  // Search engine heuristic
+  const searchEngines = [
+    "google.com",
+    "bing.com",
+    "duckduckgo.com",
+    "search.yahoo.com",
+    "ecosia.org",
+  ];
+  if (searchEngines.some((se) => host === se || host.endsWith(`.${se}`))) {
+    try {
+      const parsed = new URL(url);
+      if (parsed.pathname.includes("/search") || parsed.searchParams.has("q")) {
+        return "Study";
+      }
+    } catch (_) {
+      /* ignore */
+    }
+  }
+  // AI category hook
+  const aiCategory = globalThis.IRHTShared?.resolveCategoryWithAI
+    ? globalThis.IRHTShared.resolveCategoryWithAI(url, "Random")
+    : null;
+  if (aiCategory) {
+    return aiCategory;
+  }
+  return "Random";
+}
+
+function getCategoryOverride(host) {
+  const overrides = app.settings?.categoryOverrides;
+  if (!overrides || typeof overrides !== "object") {
+    return null;
+  }
+  for (const [pattern, category] of Object.entries(overrides)) {
+    if (!pattern || typeof pattern !== "string") {
+      continue;
+    }
+    if (matchesDomain(host, pattern)) {
+      return category;
+    }
+  }
+  return null;
+}
+
+function pickDominantCategory(categoryTotals) {
+  if (!categoryTotals || typeof categoryTotals !== "object") {
+    return null;
+  }
+  const entries = Object.entries(categoryTotals).filter(([, ms]) => ms > 0);
+  if (!entries.length) {
+    return null;
+  }
+  entries.sort((a, b) => b[1] - a[1]);
+  return entries[0][0];
+}
+
+function pickEarlyCategory(nodes, session) {
+  if (!Array.isArray(nodes) || !nodes.length) {
+    return null;
+  }
+  const sessionStart = session?.firstActivityAt || session?.startedAt || 0;
+  const windowMs = 10 * 60 * 1000;
+  const sorted = [...nodes].sort(
+    (a, b) => (a.firstSeen || 0) - (b.firstSeen || 0),
+  );
+  let early = sorted.filter(
+    (n) => (n.firstSeen || 0) - sessionStart <= windowMs,
+  );
+  if (early.length < 3) {
+    early = sorted.slice(0, 3);
+  }
+  const totals = {};
+  early.forEach((n) => {
+    const cat = n.category || "Random";
+    totals[cat] = (totals[cat] || 0) + (n.activeMs || 0);
+  });
+  return pickDominantCategory(totals);
+}
+
+function isEntertainmentCategory(category) {
+  return ["Video", "Social", "Shopping", "Random"].includes(category);
+}
+
+function isProductiveCategory(category) {
+  return ["Study", "News"].includes(category);
+}
+
+function buildSessionLabel(session, nodes, categoryTotals, avgScore) {
+  if (!session) {
+    return { text: "Unknown", detail: "" };
+  }
+  if (!Array.isArray(nodes)) {
+    nodes = Object.values(session.nodes || {});
+  }
+  const totalActiveMs = nodes.reduce((sum, n) => sum + (n.activeMs || 0), 0);
+  const totalPages = nodes.length;
+  const navCount = session.navigationCount || 0;
+  const totalMinutes = totalActiveMs / 60000;
+  const avgDwellMs = totalPages ? totalActiveMs / totalPages : 0;
+  const maxNodeMs = nodes.reduce((max, n) => Math.max(max, n.activeMs || 0), 0);
+  const topShare = totalActiveMs > 0 ? maxNodeMs / totalActiveMs : 0;
+  const revisitCount = nodes.filter((n) => (n.visitCount || 0) > 1).length;
+  const revisitShare = totalPages ? revisitCount / totalPages : 0;
+  const hopRate = totalMinutes > 0 ? navCount / totalMinutes : 0;
+  const shortSession = totalActiveMs < 90 * 1000;
+  const focus = topShare >= 0.6 && avgDwellMs >= 120000 && hopRate <= 1.5;
+  const wandering = (avgDwellMs > 0 && avgDwellMs <= 45000) || hopRate >= 3;
+  const looping = revisitShare >= 0.35 && totalPages >= 4;
+  const lateNight = isLateNight(session.firstActivityAt || session.startedAt);
+  const dominant = pickDominantCategory(categoryTotals);
+  const catSuffix =
+    dominant && dominant !== "Random" ? ` Mostly ${dominant} sites.` : "";
+
+  if (shortSession) {
+    return {
+      text: "Just starting",
+      detail: "Not enough data yet to label this session.",
+    };
+  }
+  if (focus) {
+    return {
+      text: "Steady focus",
+      detail: `Long dwell on a single thread.${catSuffix}`,
+    };
+  }
+  if (wandering && looping) {
+    return {
+      text: "Looping jumps",
+      detail: `Rapid switches with repeated returns.${catSuffix}`,
+    };
+  }
+  if (wandering) {
+    return {
+      text: "Quick hops",
+      detail: `Many short visits without settling.${catSuffix}`,
+    };
+  }
+  if (looping) {
+    return {
+      text: "Repeat loop",
+      detail: `Revisiting the same pages in sequence.${catSuffix}`,
+    };
+  }
+  if (lateNight) {
+    return {
+      text: "Late-night drift",
+      detail: `Browsing pace softened by late hours.${catSuffix}`,
+    };
+  }
+  return {
+    text: "Mixed pace",
+    detail: `Some focus with intermittent drift.${catSuffix}`,
+  };
+}
+
+function computeDeepestChain(session) {
+  const events = getSessionEvents(session).filter(
+    (e) => e && e.type === "navigation" && e.toUrl,
+  );
+  if (!events.length) {
+    return { length: 0, label: "" };
+  }
+  events.sort((a, b) => (a.ts || 0) - (b.ts || 0));
+  const chains = [];
+  let current = [];
+  events.forEach((e) => {
+    if (current.length && current[current.length - 1].toUrl === e.fromUrl) {
+      current.push(e);
+    } else {
+      if (current.length) {
+        chains.push(current);
+      }
+      current = [e];
+    }
+  });
+  if (current.length) {
+    chains.push(current);
+  }
+  let best = [];
+  chains.forEach((chain) => {
+    if (chain.length > best.length) {
+      best = chain;
+    }
+  });
+  if (!best.length) {
+    return {
+      length: events.length > 0 ? 1 : 0,
+      label: events.length
+        ? truncate(getDomain(events[0].toUrl) || events[0].toUrl, 28)
+        : "",
+    };
+  }
+  const urls = [
+    best[0].fromUrl || best[0].toUrl,
+    ...best.map((e) => e.toUrl),
+  ].filter(Boolean);
+  const unique = [...new Set(urls)];
+  const first = truncate(getDomain(unique[0]) || unique[0], 28);
+  const last = truncate(
+    getDomain(unique[unique.length - 1]) || unique[unique.length - 1],
+    28,
+  );
+  return {
+    length: unique.length,
+    label: first === last ? first : `${first} → ${last}`,
+  };
+}
+
+function computeCommonStart(state) {
+  if (!state || !state.sessions) {
+    return { domain: null, detail: "" };
+  }
+  const counts = {};
+  const sessions = Object.values(state.sessions).filter((s) => s && !s.deleted);
+  sessions.forEach((session) => {
+    const startUrl = findSessionStartUrl(session);
+    if (startUrl && /^chrome(-extension)?:|^about:|^edge:/.test(startUrl)) {
+      return;
+    }
+    const domain = getDomain(startUrl);
+    if (domain) {
+      counts[domain] = (counts[domain] || 0) + 1;
+    }
+  });
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  if (!entries.length) {
+    return { domain: null, detail: "" };
+  }
+  const [domain, count] = entries[0];
+  return { domain, detail: `Across ${count} session${count === 1 ? "" : "s"}` };
+}
+
+function buildTopPages(session) {
+  if (!session || !session.nodes) {
+    return [];
+  }
+  return Object.values(session.nodes)
+    .filter((n) => n.url && !isInternalUrl(n.url))
+    .map((n) => ({ url: n.url || "", activeMs: n.activeMs || 0 }))
+    .sort((a, b) => b.activeMs - a.activeMs);
+}
+
+function buildTopDistractions(session) {
+  if (!session || !session.nodes) {
+    return [];
+  }
+  return Object.values(session.nodes)
+    .filter((n) => (n.activeMs || 0) > 0 && n.url && !isInternalUrl(n.url))
+    .map((n) => ({
+      url: n.url || "",
+      activeMs: n.activeMs || 0,
+      distractionScore: n.distractionScore || 0,
+    }))
+    .sort((a, b) => b.distractionScore - a.distractionScore);
+}
+
+function buildDamageReceipts(session) {
+  if (!session) {
+    return [];
+  }
+  const receipts = [];
+  const trapDoors = session.trapDoors || [];
+  const totals = session.categoryTotals || {};
+  const entertainmentCategories = Object.entries(totals)
+    .filter(([cat]) => isEntertainmentCategory(cat))
+    .sort((a, b) => b[1] - a[1]);
+  trapDoors.forEach((trap) => {
+    const domain = getDomain(trap.url) || truncate(trap.url || "", 28);
+    const postMs = trap.postVisitDurationMs || 0;
+    receipts.push({
+      domain,
+      duration: formatDuration(postMs),
+      depth: trap.postVisitDepth || 0,
+      url: trap.url,
+    });
+  });
+  entertainmentCategories.forEach(([cat, ms]) => {
+    if (ms >= 2 * 60 * 1000) {
+      receipts.push({ category: cat, duration: formatDuration(ms) });
+    }
+  });
+  return receipts;
+}
+
+function computeShortsTime(session) {
+  if (!session || !session.nodes) {
+    return 0;
+  }
+  let total = 0;
+  Object.values(session.nodes).forEach((node) => {
+    if (!node.url || typeof node.url !== "string") {
+      return;
+    }
+    try {
+      const parsed = new URL(node.url);
+      if (/\/shorts(\/|$)/.test(parsed.pathname)) {
+        total += node.activeMs || 0;
+      }
+    } catch (_) {
+      /* skip bad URLs */
+    }
+  });
+  return total;
+}
+
+function findSessionEndUrl(session) {
+  if (!session) {
+    return null;
+  }
+  const events = getSessionEvents(session)
+    .slice()
+    .sort((a, b) => (a.ts || 0) - (b.ts || 0));
+  for (let i = events.length - 1; i >= 0; i--) {
+    const e = events[i];
+    if (e?.toUrl && !isInternalUrl(e.toUrl)) {
+      return e.toUrl;
+    }
+    if (e?.url && !isInternalUrl(e.url)) {
+      return e.url;
+    }
+  }
+  const nodes = Object.values(session.nodes || {})
+    .filter((n) => n.url && !isInternalUrl(n.url));
+  if (!nodes.length) {
+    return null;
+  }
+  nodes.sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0));
+  return (nodes[0].lastSeen || 0) > 0 ? nodes[0].url : null;
+}
+
+function buildCalloutMessages(session, state, tone) {
+  if (!session) {
+    return [];
+  }
+  const messages = [];
+  const resolvedTone = tone || app.settings?.tone || "neutral";
+  const trapDoors = session.trapDoors || [];
+  const avgScore = session.distractionAverage || 0;
+  const lateNight = isLateNight(session.firstActivityAt || session.startedAt);
+  const nodes = Object.values(session.nodes || {});
+  const totalActiveMs = nodes.reduce((sum, n) => sum + (n.activeMs || 0), 0);
+
+  if (trapDoors.length) {
+    const trap = trapDoors[0];
+    const domain = getDomain(trap.url) || truncate(trap.url || "", 28);
+    const postMs = trap.postVisitDurationMs || 0;
+    if (resolvedTone === "direct") {
+      messages.push(
+        `You hit ${domain} and spent ${formatDuration(postMs)} going ${trap.postVisitDepth || 0} pages deep.`,
+      );
+    } else {
+      messages.push(
+        `Trap door detected at ${domain}: ${formatDuration(postMs)} downstream.`,
+      );
+    }
+  }
+
+  if (avgScore >= 1.6) {
+    messages.push(
+      resolvedTone === "direct"
+        ? "High distraction score this session."
+        : "Distraction level elevated.",
+    );
+  }
+
+  if (lateNight && totalActiveMs > 10 * 60 * 1000) {
+    messages.push(
+      resolvedTone === "direct"
+        ? "Late-night session ran long."
+        : "Late-night browsing extended beyond 10 minutes.",
+    );
+  }
+
+  const previous = findPreviousSession(state, session);
+  if (previous?.trapDoors?.length && trapDoors.length) {
+    const prevDomain = getDomain(previous.trapDoors[0].url);
+    const currDomain = getDomain(trapDoors[0].url);
+    if (prevDomain && currDomain && prevDomain === currDomain) {
+      messages.push(`Recurring trap: ${prevDomain} appeared in both sessions.`);
+    }
+  }
+
+  const shortsMs = computeShortsTime(session);
+  if (shortsMs >= 5 * 60 * 1000) {
+    messages.push(`Shorts viewing: ${formatDuration(shortsMs)}.`);
+  }
+
+  if (
+    app.settings?.intentDriftAlerts &&
+    session.intentDriftLabel &&
+    session.intentDriftLabel !== "Low" &&
+    session.intentDriftLabel !== "None"
+  ) {
+    let driftMsg = `Intent drift: ${session.intentDriftLabel}`;
+    if (session.intentDriftReason) {
+      driftMsg += ` \u2014 ${session.intentDriftReason}`;
+    }
+    messages.push(driftMsg);
+  }
+
+  return messages;
+}
+
+function findPreviousSession(state, session) {
+  if (!state || !session || !Array.isArray(state.sessionOrder)) {
+    return null;
+  }
+  const index = state.sessionOrder.indexOf(session.id);
+  if (index <= 0) {
+    return null;
+  }
+  for (let i = index - 1; i >= 0; i--) {
+    const prev = state.sessions?.[state.sessionOrder[i]];
+    if (prev && !prev.deleted) {
+      return prev;
+    }
+  }
+  return null;
+}
+
+function getSessionCacheKey(session) {
+  if (!session) {
+    return "empty";
+  }
+  const nodeCount = Object.keys(session.nodes || {}).length;
+  const edgeCount = Object.keys(session.edges || {}).length;
+  return `${session.id}:${session.updatedAt || 0}:${nodeCount}:${edgeCount}:${session.navigationCount || 0}`;
+}
+
+function getDerivedSessionData(session) {
+  if (!session) {
+    return {
+      topDomains: [],
+      topPages: [],
+      deepestChain: { length: 0, label: "" },
+      damageReceipts: [],
+    };
+  }
+  const cacheKey = getSessionCacheKey(session);
+  const cached = getBoundedCache(
+    app.cache.sessionDerived,
+    cacheKey,
+    CACHE_LIMITS.sessionDerived,
+  );
+  if (cached) {
+    return cached;
+  }
+  const topDomains = buildTopDomains(session);
+  const topPages = buildTopPages(session);
+  const deepestChain = computeDeepestChain(session);
+  const receipts = buildDamageReceipts(session);
+  const damageReceipts = receipts.map((r) => {
+    if (r.category) {
+      return `${r.category}: ${r.duration}`;
+    }
+    return `${r.domain}: ${r.duration} (${r.depth} pages deep)`;
+  });
+  const result = { topDomains, topPages, deepestChain, damageReceipts };
+  setBoundedCache(
+    app.cache.sessionDerived,
+    cacheKey,
+    result,
+    CACHE_LIMITS.sessionDerived,
+  );
+  return result;
+}
+
+function ensureSessionInsights(session) {
+  if (!session || !session.nodes) {
+    return;
+  }
+  const nodes = Object.values(session.nodes);
+  if (!nodes.length) {
+    return;
+  }
+  const signals = computeSessionSignals(session);
+  nodes.forEach((node) => {
+    if (node.distractionScore === undefined || node.distractionScore === null) {
+      const result = computeDistractionScore(node, session, {
+        signals,
+        settings: app.settings || {},
+        categoryMultipliers: CATEGORY_MULTIPLIERS,
+        isLateNight,
+        matchDomain: matchesDomain,
+      });
+      node.distractionScore = result.score;
+      node.distractionComponents = result.components;
+    }
+    if (!node.category) {
+      node.category = classifyUrl(node.url);
+    }
+  });
+  // Recompute categoryTotals
+  const categoryTotals = {};
+  nodes.forEach((n) => {
+    const cat = n.category || "Random";
+    categoryTotals[cat] = (categoryTotals[cat] || 0) + (n.activeMs || 0);
+  });
+  session.categoryTotals = categoryTotals;
+  // Recompute distraction average
+  const scores = nodes
+    .filter((n) => Number.isFinite(n.distractionScore))
+    .map((n) => n.distractionScore);
+  session.distractionAverage = scores.length
+    ? scores.reduce((s, v) => s + v, 0) / scores.length
+    : 0;
+  session.distractionNormalized = normalizeDistractionScore(
+    session.distractionAverage,
+  );
+  session.distractionLabel = getDistractionLabel(session.distractionNormalized);
+  // Recompute label
+  const label = buildSessionLabel(
+    session,
+    nodes,
+    categoryTotals,
+    session.distractionAverage,
+  );
+  session.label = label.text;
+  session.labelDetail = label.detail;
+}
+
+function renderRankList(container, items, labelFn, valueFn) {
+  if (!container) {
+    return;
+  }
+  container.innerHTML = "";
+  if (!Array.isArray(items) || !items.length) {
+    return;
+  }
+  items.forEach((item) => {
+    const li = document.createElement("li");
+    li.className = "rank-item";
+    const label = document.createElement("span");
+    label.textContent =
+      typeof labelFn === "function" ? labelFn(item) : String(item);
+    li.appendChild(label);
+    if (typeof valueFn === "function") {
+      const value = document.createElement("strong");
+      value.textContent = String(valueFn(item));
+      li.appendChild(value);
+    }
+    container.appendChild(li);
+  });
 }
 
 function buildTimelineSegments(session, tracking, isActiveSession) {
@@ -5755,6 +6696,7 @@ if (!IS_TEST) {
     formatDuration,
     formatScore,
     getDomain,
+    isInternalUrl,
     truncate,
     colorFor,
     hashString,

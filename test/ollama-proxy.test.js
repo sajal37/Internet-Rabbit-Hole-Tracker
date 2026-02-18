@@ -505,7 +505,7 @@ test("ollama proxy handles unexpected errors", () => {
   const error = new Error("boom");
   handleServerError(
     error,
-    3010,
+    3000,
     {
       log: (...args) => messages.push(args),
       exit: (code) => {

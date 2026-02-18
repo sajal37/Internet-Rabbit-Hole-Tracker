@@ -1924,7 +1924,7 @@ test("dashboard branch coverage", async () => {
   hooks.sanitizeText(null, 10, "fallback");
   hooks.sanitizeEndpoint(123, "fallback");
   hooks.sanitizeText("x".repeat(120), 40, "fallback");
-  hooks.sanitizeEndpoint("http://localhost:3010/analyze", "fallback");
+  hooks.sanitizeEndpoint("http://localhost:3000/analyze", "fallback");
   hooks.sanitizeEndpoint("https://example.com/path", "fallback");
   hooks.sanitizeEndpoint("ftp://example.com", "fallback");
   hooks.sanitizeEndpoint("not-a-url", "fallback");
@@ -1935,7 +1935,7 @@ test("dashboard branch coverage", async () => {
     dashboardButtonLabel: "x".repeat(80),
     dashboardFocusNote: "Focus",
     popupNote: "Note",
-    ollamaEndpoint: "http://localhost:3010/analyze",
+    ollamaEndpoint: "http://localhost:3000/analyze",
     ollamaModel: "model",
   });
   assert.equal(compactSettings.uiDensity, "compact");

@@ -545,6 +545,8 @@ test("insights branch coverage for fallbacks", () => {
 
   assert.equal(hooks.findSessionStartUrl(null), null);
   assert.equal(hooks.findSessionStartUrl({}), null);
+  // After internal-URL filtering, null-URL nodes are skipped so the
+  // first valid node ('later.com') becomes the start URL.
   assert.equal(
     hooks.findSessionStartUrl({
       events: [],
@@ -552,6 +554,15 @@ test("insights branch coverage for fallbacks", () => {
         a: { url: null, firstSeen: 1 },
         b: { url: "https://later.com", firstSeen: 2 },
       },
+    }),
+    "https://later.com",
+  );
+
+  // When ALL nodes have null URLs, returns null.
+  assert.equal(
+    hooks.findSessionStartUrl({
+      events: [],
+      nodes: { a: { url: null, firstSeen: 1 } },
     }),
     null,
   );
@@ -567,4 +578,194 @@ test("insights branch coverage for fallbacks", () => {
 
   assert.equal(hooks.generateInsights(null, null).length, 0);
   assert.equal(hooks.generateInsights({ nodes: null }, null).length, 0);
+});
+
+test("insights new pattern detection: deepDive, scattered, tabExplosion", () => {
+  const clock = createClock(5000);
+  const { hooks } = loadInsights(clock);
+
+  // Deep dive: <=2 domains, >=5 pages, >=5min active
+  const deepDiveSession = {
+    nodes: {
+      a: { url: "https://docs.example.com/page1", activeMs: 120000, visitCount: 1 },
+      b: { url: "https://docs.example.com/page2", activeMs: 80000, visitCount: 1 },
+      c: { url: "https://docs.example.com/page3", activeMs: 60000, visitCount: 1 },
+      d: { url: "https://docs.example.com/page4", activeMs: 50000, visitCount: 1 },
+      e: { url: "https://docs.example.com/page5", activeMs: 40000, visitCount: 1 },
+    },
+    navigationCount: 4,
+    startedAt: clock.now(),
+  };
+  const ddAnalysis = hooks.analyzeSession(deepDiveSession, null);
+  assert.ok(ddAnalysis.deepDive);
+  assert.ok(ddAnalysis.domainCount <= 2);
+
+  // Scattered: >=6 domains, avg < 60s
+  const scatteredSession = {
+    nodes: {
+      a: { url: "https://a.com/", activeMs: 30000, visitCount: 1 },
+      b: { url: "https://b.com/", activeMs: 30000, visitCount: 1 },
+      c: { url: "https://c.com/", activeMs: 30000, visitCount: 1 },
+      d: { url: "https://d.com/", activeMs: 30000, visitCount: 1 },
+      e: { url: "https://e.com/", activeMs: 30000, visitCount: 1 },
+      f: { url: "https://f.com/", activeMs: 30000, visitCount: 1 },
+    },
+    navigationCount: 5,
+    startedAt: clock.now(),
+  };
+  const scAnalysis = hooks.analyzeSession(scatteredSession, null);
+  assert.ok(scAnalysis.scattered);
+  assert.ok(scAnalysis.domainCount >= 6);
+
+  // Tab explosion: >=10 pages, >=4 pages/min
+  const tabExplosionSession = {
+    nodes: {},
+    navigationCount: 15,
+    startedAt: clock.now(),
+  };
+  for (let i = 0; i < 12; i++) {
+    tabExplosionSession.nodes[`n${i}`] = {
+      url: `https://site${i}.com/`,
+      activeMs: 10000,
+      visitCount: 1,
+    };
+  }
+  const teAnalysis = hooks.analyzeSession(tabExplosionSession, null);
+  assert.ok(teAnalysis.tabExplosion);
+
+  // buildReasonCandidates with new flags
+  const copy = {
+    insightDeepDive: "Deep dive",
+    insightTabExplosion: "Tab explosion",
+    insightScatter: "Scatter",
+    insightFocus: "Focus",
+    insightFeed: "Feed",
+    insightWander: "Wander",
+    insightLoop: "Loop",
+    insightLateNight: "Late",
+    insightMixed: "Mixed",
+  };
+  const deepDiveCandidates = hooks.buildReasonCandidates(
+    { shortSession: false, focus: false, deepDive: true, feedLike: false, tabExplosion: false, wandering: false, scattered: false, looping: false, lateNight: false },
+    copy,
+  );
+  assert.ok(deepDiveCandidates.some((c) => c.id === "deepDive"));
+
+  const tabExplosionCandidates = hooks.buildReasonCandidates(
+    { shortSession: false, focus: false, deepDive: false, feedLike: false, tabExplosion: true, wandering: false, scattered: false, looping: false, lateNight: false },
+    copy,
+  );
+  assert.ok(tabExplosionCandidates.some((c) => c.id === "tabExplosion"));
+
+  const scatterCandidates = hooks.buildReasonCandidates(
+    { shortSession: false, focus: false, deepDive: false, feedLike: false, tabExplosion: false, wandering: false, scattered: true, looping: false, lateNight: false },
+    copy,
+  );
+  assert.ok(scatterCandidates.some((c) => c.id === "scatter"));
+});
+
+test("insights poetic tone resolution", () => {
+  const { hooks } = loadInsights();
+  assert.equal(hooks.resolveTone("poetic"), "poetic");
+  assert.equal(hooks.resolveTone("direct"), "direct");
+  assert.equal(hooks.resolveTone("casual"), "neutral");
+});
+
+test("insights computeSessionTrend", () => {
+  const clock = createClock(5000);
+  const { hooks } = loadInsights(clock);
+
+  // Not enough sessions
+  const emptyTrend = hooks.computeSessionTrend({}, null, 5);
+  assert.equal(emptyTrend.trend, "neutral");
+
+  const state = {
+    sessionOrder: ["a", "b", "c"],
+    sessions: {
+      a: { nodes: { x: { activeMs: 60000 } } },
+      b: { nodes: { y: { activeMs: 60000 } } },
+      c: { nodes: { z: { activeMs: 60000 } } },
+    },
+  };
+
+  // Current session much longer than average => "longer"
+  const longerTrend = hooks.computeSessionTrend(
+    state,
+    { nodes: { x: { activeMs: 300000 } } },
+    5,
+  );
+  assert.equal(longerTrend.trend, "longer");
+
+  // Current session much shorter => "shorter"
+  const shorterTrend = hooks.computeSessionTrend(
+    state,
+    { nodes: { x: { activeMs: 10000 } } },
+    5,
+  );
+  assert.equal(shorterTrend.trend, "shorter");
+
+  // Normal range
+  const neutralTrend = hooks.computeSessionTrend(
+    state,
+    { nodes: { x: { activeMs: 60000 } } },
+    5,
+  );
+  assert.equal(neutralTrend.trend, "neutral");
+});
+
+test("insights computeProductivityStreak", () => {
+  const clock = createClock(5000);
+  const { hooks } = loadInsights(clock);
+
+  // Empty
+  const empty = hooks.computeProductivityStreak({}, 5);
+  assert.equal(empty.streak, 0);
+
+  // Focus sessions have topShare >= 0.6, avgActiveMs >= 120000, hopRate <= 1.5
+  const state = {
+    sessionOrder: ["a", "b", "c"],
+    sessions: {
+      a: {
+        nodes: {
+          x: { url: "https://a.com", activeMs: 600000, visitCount: 1 },
+          y: { url: "https://a.com/2", activeMs: 60000, visitCount: 1 },
+        },
+        navigationCount: 1,
+        startedAt: clock.now(),
+      },
+      b: {
+        nodes: {
+          x: { url: "https://b.com", activeMs: 500000, visitCount: 1 },
+          y: { url: "https://b.com/2", activeMs: 50000, visitCount: 1 },
+        },
+        navigationCount: 1,
+        startedAt: clock.now(),
+      },
+      c: {
+        nodes: {
+          x: { url: "https://c.com", activeMs: 10000, visitCount: 1 },
+          y: { url: "https://c.com/2", activeMs: 10000, visitCount: 1 },
+          z: { url: "https://c.com/3", activeMs: 10000, visitCount: 1 },
+        },
+        navigationCount: 10,
+        startedAt: clock.now(),
+      },
+    },
+  };
+
+  // c is last and unfocused => breaks streak, b and a are focus
+  const streak = hooks.computeProductivityStreak(state, 5);
+  assert.equal(streak.streak, 0); // c breaks the streak from the end
+  assert.equal(streak.total, 3);
+
+  // All focused sessions
+  const allFocused = {
+    sessionOrder: ["a", "b"],
+    sessions: {
+      a: state.sessions.a,
+      b: state.sessions.b,
+    },
+  };
+  const focusStreak = hooks.computeProductivityStreak(allFocused, 5);
+  assert.equal(focusStreak.streak, 2);
 });

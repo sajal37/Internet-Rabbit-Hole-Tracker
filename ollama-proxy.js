@@ -1,7 +1,7 @@
 // This is a proxy server for Ollama API
 const http = require("node:http");
 
-const PORT = 3010;
+const PORT = 3000;
 const OLLAMA_URL = "http://localhost:11434/api/generate";
 const OLLAMA_MODEL = "llama3";
 const MAX_BODY_BYTES = 512 * 1024;

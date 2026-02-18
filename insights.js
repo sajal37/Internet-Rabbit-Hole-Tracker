@@ -14,6 +14,8 @@
       summaryLoopWander: "Looping and hopping in the same stretch.",
       summaryLateNight: "Late-night browsing loosened the pace.",
       summaryMixed: "Mixed pace with some focus and drift.",
+      summaryDeepDive: "Deep dive into a single topic.",
+      summaryScatter: "Scattered across many unrelated sites.",
       originMissing: "No clear origin yet.",
       originShort: "Not enough time yet to name a pattern.",
       insightFocus: "Focus streak: long dwell on one thread.",
@@ -23,6 +25,10 @@
       insightFeed: "Feed-like pace: steady scrolling.",
       insightShort: "Too short to label yet.",
       insightMixed: "Mixed rhythm: focus plus drift.",
+      insightDeepDive: "Deep dive: extended time on one domain.",
+      insightScatter: "Scattered attention: many unrelated domains.",
+      insightTabExplosion: "Tab explosion: many tabs opened rapidly.",
+      insightMomentum: "Momentum: productive streak continues.",
     },
     direct: {
       summaryEmpty: "No session yet.",
@@ -33,6 +39,8 @@
       summaryLoopWander: "Looping and hopping in the same stretch.",
       summaryLateNight: "Late-night browsing loosened the pace.",
       summaryMixed: "Mixed pace with some focus and drift.",
+      summaryDeepDive: "Deep dive into a single topic.",
+      summaryScatter: "Scattered across many unrelated sites.",
       originMissing: "No clear origin yet.",
       originShort: "Not enough time yet to name a pattern.",
       insightFocus: "Focus streak: long dwell on one thread.",
@@ -42,11 +50,41 @@
       insightFeed: "Feed-like pace: steady scrolling.",
       insightShort: "Too short to label yet.",
       insightMixed: "Mixed rhythm: focus plus drift.",
+      insightDeepDive: "Deep dive: extended time on one domain.",
+      insightScatter: "Scattered attention: many unrelated domains.",
+      insightTabExplosion: "Tab explosion: many tabs opened rapidly.",
+      insightMomentum: "Momentum: productive streak continues.",
+    },
+    poetic: {
+      summaryEmpty: "A blank page, waiting to be written.",
+      summaryStarting: "The first steps of a new journey.",
+      summaryFocus: "A river that found its course.",
+      summaryWander: "A butterfly between gardens.",
+      summaryLoop: "A waltz returning to the same refrain.",
+      summaryLoopWander: "Circles within circles, restless motion.",
+      summaryLateNight: "The midnight hours blurred the edges.",
+      summaryMixed: "A tapestry of wandering and purpose.",
+      summaryDeepDive: "Descending into the depths of one idea.",
+      summaryScatter: "Seeds scattered across many fields.",
+      originMissing: "The origin remains a mystery.",
+      originShort: "Too brief a glimpse to name a pattern.",
+      insightFocus: "A long meditation on a single thread.",
+      insightWander: "Quick leaps from stone to stone.",
+      insightLoop: "Footprints that circle back on themselves.",
+      insightLateNight: "Moonlit browsing softened the edges.",
+      insightFeed: "The river of content carried you along.",
+      insightShort: "A whisper, not yet a story.",
+      insightMixed: "A braided path of focus and drift.",
+      insightDeepDive: "You tunneled deep into one world.",
+      insightScatter: "Many windows opened, none quite settled.",
+      insightTabExplosion: "An explosion of curious tabs.",
+      insightMomentum: "Riding a wave of productive energy.",
     },
   };
 
   function resolveTone(tone) {
-    return tone === "direct" ? "direct" : DEFAULT_TONE;
+    if (tone === "direct" || tone === "poetic") return tone;
+    return DEFAULT_TONE;
   }
 
   function formatDuration(ms) {
@@ -84,6 +122,20 @@
     const lateNight = isLateNight(
       session?.firstActivityAt || session?.startedAt,
     );
+
+    // New pattern detections
+    const uniqueDomains = new Set();
+    nodes.forEach((node) => {
+      const d = getDomain(node.url);
+      if (d) uniqueDomains.add(d);
+    });
+    const domainCount = uniqueDomains.size;
+    const deepDive =
+      domainCount <= 2 && totalPages >= 5 && totalActiveMs >= 300000;
+    const scattered =
+      domainCount >= 6 && avgActiveMs > 0 && avgActiveMs < 60000;
+    const tabExplosion = totalPages >= 10 && totalMinutes > 0 && totalPages / totalMinutes >= 4;
+
     return {
       totalActiveMs,
       totalPages,
@@ -98,6 +150,10 @@
       looping,
       feedLike,
       lateNight,
+      deepDive,
+      scattered,
+      tabExplosion,
+      domainCount,
     };
   }
 
@@ -268,11 +324,20 @@
     if (analysis.focus) {
       candidates.push({ id: "focus", text: copy.insightFocus, score: 80 });
     }
+    if (analysis.deepDive) {
+      candidates.push({ id: "deepDive", text: copy.insightDeepDive, score: 78 });
+    }
     if (analysis.feedLike) {
       candidates.push({ id: "feed", text: copy.insightFeed, score: 75 });
     }
+    if (analysis.tabExplosion) {
+      candidates.push({ id: "tabExplosion", text: copy.insightTabExplosion, score: 72 });
+    }
     if (analysis.wandering) {
       candidates.push({ id: "wander", text: copy.insightWander, score: 70 });
+    }
+    if (analysis.scattered) {
+      candidates.push({ id: "scatter", text: copy.insightScatter, score: 68 });
     }
     if (analysis.looping) {
       candidates.push({ id: "loop", text: copy.insightLoop, score: 65 });
@@ -310,6 +375,34 @@
       .slice(0, MAX_INSIGHTS);
   }
 
+  function computeSessionTrend(state, currentSession, limit = 8) {
+    const sessions = collectSessions(state).slice(-limit);
+    if (sessions.length < 2) return { trend: "neutral", avgMs: 0, currentMs: 0 };
+    const currentMs = getSessionActiveMs(currentSession, state?.tracking);
+    const durations = sessions.map((s) => getSessionActiveMs(s, null));
+    const totalMs = durations.reduce((sum, d) => sum + d, 0);
+    const avgMs = Math.round(totalMs / durations.length);
+    const ratio = avgMs > 0 ? currentMs / avgMs : 1;
+    let trend = "neutral";
+    if (ratio >= 1.5) trend = "longer";
+    else if (ratio <= 0.5) trend = "shorter";
+    return { trend, avgMs, currentMs };
+  }
+
+  function computeProductivityStreak(state, limit = 10) {
+    const sessions = collectSessions(state).slice(-limit);
+    let streak = 0;
+    for (let i = sessions.length - 1; i >= 0; i--) {
+      const analysis = analyzeSession(sessions[i], null);
+      if (analysis.focus || analysis.deepDive) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+    return { streak, total: sessions.length };
+  }
+
   globalThis.IRHTInsights = {
     buildSessionMirror,
     generateInsights,
@@ -334,6 +427,8 @@
       computeDomainRepetition,
       computeLateNightCount,
       computeTypicalDrift,
+      computeSessionTrend,
+      computeProductivityStreak,
       buildSessionMirror,
       buildReasonCandidates,
       generateInsights,

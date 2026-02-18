@@ -52,7 +52,7 @@ If you have [Ollama](https://ollama.ai) running locally, the extension can gener
 
 ```bash
 npm install
-npm start        # starts proxy on http://localhost:3010
+npm start        # starts proxy on http://localhost:3000
 ```
 
 The proxy relays prompts to Ollama's API. Configure the endpoint and model in dashboard settings.
@@ -120,7 +120,7 @@ Four organized settings pages:
          ▼
 ┌─────────────────┐        ┌─────────────┐
 │ ollama-proxy.js │ ──→    │  Ollama API │
-│ (localhost:3010)│        │  (local LLM)│
+│ (localhost:3000)│        │  (local LLM)│
 └─────────────────┘        └─────────────┘
 ```
 
@@ -242,7 +242,7 @@ Enable **Sync** in settings to keep a small snapshot of recent sessions in `chro
 | `alarms`                           | Periodic idle checks and active time flush                 |
 | `windows`                          | Detect window focus changes                                |
 | `host_permissions: <all_urls>`     | Content script for activity detection on all pages         |
-| `host_permissions: localhost:3010` | Optional AI proxy communication                            |
+| `host_permissions: localhost:3000` | Optional AI proxy communication                            |
 
 ---
 

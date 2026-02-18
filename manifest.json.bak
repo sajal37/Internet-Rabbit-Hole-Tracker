@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Internet Rabbit Hole Tracker",
-  "version": "1.0.0",
-  "description": "Visualize your browsing sessions as rabbit hole graphs. Track active time, navigation chains, distraction patterns, and build self-awareness about how you spend time online.",
+  "version": "0.1.0",
+  "description": "Tracks active browsing time and navigation chains.",
   "permissions": [
     "tabs",
     "windows",
@@ -14,7 +14,7 @@
   "host_permissions": [
     "http://*/*",
     "https://*/*",
-    "http://localhost:3000/*"
+    "http://localhost:3010/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -37,6 +37,5 @@
   "action": {
     "default_title": "Rabbit Hole Tracker",
     "default_popup": "popup.html"
-  },
-  "minimum_chrome_version": "116"
+  }
 }

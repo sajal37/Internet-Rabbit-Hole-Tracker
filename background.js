@@ -29,7 +29,7 @@ const DEFAULT_SETTINGS = {
   uiDensity: "comfortable",
   reduceMotion: false,
   sessionListLimit: 12,
-  ollamaEndpoint: "http://localhost:3010/analyze",
+  ollamaEndpoint: "http://localhost:3000/analyze",
   ollamaModel: "llama3",
   popupLayout: "stack",
   popupDensity: "roomy",
@@ -112,7 +112,8 @@ const REALTIME_DEFAULT_BATCH_MS = 350;
 
 const CATEGORY_RULES = globalThis.IRHTCategories?.CATEGORY_RULES || [];
 const CATEGORY_LIST = globalThis.IRHTCategories?.CATEGORY_LIST || [];
-const CATEGORY_MULTIPLIERS = globalThis.IRHTCategories?.CATEGORY_MULTIPLIERS || {};
+const CATEGORY_MULTIPLIERS =
+  globalThis.IRHTCategories?.CATEGORY_MULTIPLIERS || {};
 
 const runtime = {
   activeTabId: null,
@@ -226,7 +227,10 @@ function handlePortConnect(port) {
     if (!message || typeof message !== "object") {
       return;
     }
-    if (message.type === "request_snapshot" || message.type === "request_full") {
+    if (
+      message.type === "request_snapshot" ||
+      message.type === "request_full"
+    ) {
       sendPortStateSnapshot(port, "request");
     }
   });
@@ -384,8 +388,7 @@ function trimEventsForStorage(events, limit) {
   const keepLowIndexes = new Set(lowValueIndexes.slice(-remaining));
   return events.filter(
     (event, index) =>
-      event &&
-      (!lowValueTypes.has(event.type) || keepLowIndexes.has(index)),
+      event && (!lowValueTypes.has(event.type) || keepLowIndexes.has(index)),
   );
 }
 
@@ -401,13 +404,10 @@ function scoreSessionValue(session) {
   const activeMs = getSessionActiveMs(session);
   const navCount = session.navigationCount || 0;
   const nodeCount = Object.keys(session.nodes || {}).length;
-  const distraction = normalizeDistractionScore(session.distractionAverage || 0);
-  return (
-    activeMs +
-    navCount * 15000 +
-    nodeCount * 10000 +
-    distraction * 1000
+  const distraction = normalizeDistractionScore(
+    session.distractionAverage || 0,
   );
+  return activeMs + navCount * 15000 + nodeCount * 10000 + distraction * 1000;
 }
 
 function isTrivialSession(session) {
@@ -668,7 +668,11 @@ function decodeStoredState(raw) {
   if (!raw) {
     return null;
   }
-  if (raw.schemaVersion === SCHEMA_VERSION && raw.compactTables && raw.urlTable) {
+  if (
+    raw.schemaVersion === SCHEMA_VERSION &&
+    raw.compactTables &&
+    raw.urlTable
+  ) {
     const urlTable = Array.isArray(raw.urlTable) ? raw.urlTable : [];
     const sessions = {};
     Object.values(raw.sessions || {}).forEach((session) => {
@@ -779,10 +783,13 @@ async function applyDailySessionResetIfNeeded() {
   state = createNewState();
   activeSessionCache = state.sessions[state.activeSessionId];
   activeSessionIdCache = state.activeSessionId;
-  await storageSet({
-    [DAILY_SESSION_RESET_KEY]: timestamp,
-    [STORAGE_KEY]: encodeStateForStorage(state),
-  }, "daily_reset");
+  await storageSet(
+    {
+      [DAILY_SESSION_RESET_KEY]: timestamp,
+      [STORAGE_KEY]: encodeStateForStorage(state),
+    },
+    "daily_reset",
+  );
   await storageSyncSet({ [SYNC_STATE_KEY]: null }, "daily_reset_sync");
   return true;
 }
@@ -798,9 +805,9 @@ function primeStateForDashboard() {
     .sort((a, b) => (a.startedAt || 0) - (b.startedAt || 0))
     .slice(-3)
     .forEach((session) => {
-        if (!session) {
-          return;
-        }
+      if (!session) {
+        return;
+      }
       if (!session.label || !session.categoryTotals) {
         computeSessionInsights(session);
       } else {
@@ -883,7 +890,10 @@ function upgradeState(existingState) {
     }
     if (session.firstActivityAt === undefined) {
       session.firstActivityAt =
-        session.lastActivityAt || session.startedAt || session.updatedAt || null;
+        session.lastActivityAt ||
+        session.startedAt ||
+        session.updatedAt ||
+        null;
     }
     if (session.eventCursor === undefined) {
       session.eventCursor = Array.isArray(session.events)
@@ -938,8 +948,7 @@ function migrateState(oldState) {
     ...oldSession,
     endedAt: null,
     endReason: null,
-    firstActivityAt:
-      oldSession.startedAt || oldSession.updatedAt || timestamp,
+    firstActivityAt: oldSession.startedAt || oldSession.updatedAt || timestamp,
     lastActivityAt: oldSession.updatedAt || oldSession.startedAt || timestamp,
     navigationCount,
     trapDoors: [],
@@ -1023,7 +1032,11 @@ function getActiveSession(timestamp = now()) {
   if (activeSession) {
     activeCandidates.forEach((session) => {
       if (session.id !== activeSession.id && !session.endedAt) {
-        endSession(session, getDayEnd(session.startedAt || timestamp), "superseded");
+        endSession(
+          session,
+          getDayEnd(session.startedAt || timestamp),
+          "superseded",
+        );
       }
     });
   }
@@ -1097,7 +1110,8 @@ function shouldSplitSessionForIntent(session, url, timestamp) {
   if (!session || !url) {
     return false;
   }
-  const lastActivityAt = session.lastActivityAt || session.updatedAt || session.startedAt;
+  const lastActivityAt =
+    session.lastActivityAt || session.updatedAt || session.startedAt;
   if (!lastActivityAt) {
     return false;
   }
@@ -1267,10 +1281,7 @@ function scheduleSessionAnalysis(session, timestamp) {
       }
     }
     const shouldRecompute =
-      !metrics ||
-      metrics.maxDirty ||
-      !target.label ||
-      !target.categoryTotals;
+      !metrics || metrics.maxDirty || !target.label || !target.categoryTotals;
     if (shouldRecompute) {
       computeSessionInsights(target);
     }
@@ -1442,7 +1453,11 @@ function buildStateDelta(meta) {
   if (session && tracking?.activeUrl && session.nodes?.[tracking.activeUrl]) {
     delta.nodePatch = buildNodePatch(session.nodes[tracking.activeUrl]);
   }
-  if (session && tracking?.activeEdgeKey && session.edges?.[tracking.activeEdgeKey]) {
+  if (
+    session &&
+    tracking?.activeEdgeKey &&
+    session.edges?.[tracking.activeEdgeKey]
+  ) {
     delta.edgePatch = buildEdgePatch(session.edges[tracking.activeEdgeKey]);
   }
   const latestEvent = session ? getLatestSessionEvent(session) : null;
@@ -1588,9 +1603,10 @@ function getLatestSessionEvent(session) {
 
 function persistSyncState(reason) {
   const syncState = buildSyncState(state);
-  storageSyncSet({ [SYNC_STATE_KEY]: syncState }, reason || "sync_persist").then(
-    () => {},
-  );
+  storageSyncSet(
+    { [SYNC_STATE_KEY]: syncState },
+    reason || "sync_persist",
+  ).then(() => {});
 }
 
 function buildSyncState(sourceState) {
@@ -1916,7 +1932,9 @@ function getUserIdleTimeoutMs() {
 function getAdaptiveIdleTimeoutMs() {
   const base = getUserIdleTimeoutMs();
   const activityType = runtime.lastActivityType || "";
-  if (["keydown", "mousedown", "pointerdown", "touchstart"].includes(activityType)) {
+  if (
+    ["keydown", "mousedown", "pointerdown", "touchstart"].includes(activityType)
+  ) {
     return Math.max(30 * 1000, Math.round(base * 0.6));
   }
   if (["scroll", "wheel", "mousemove"].includes(activityType)) {
@@ -1949,7 +1967,7 @@ function normalizeUrl(url) {
   if (runtime.normalizedUrlCache.has(url)) {
     return runtime.normalizedUrlCache.get(url);
   }
-  if (!/^(https?:|chrome-extension:)/i.test(url)) {
+  if (!/^https?:/i.test(url)) {
     cacheSet(runtime.normalizedUrlCache, url, null, URL_META_CACHE_LIMIT);
     return null;
   }
@@ -2138,7 +2156,12 @@ function buildSessionInsightsKey(session, metrics) {
   ].join("|");
 }
 
-function computeDistractionScore(node, session, signals = null, overrides = null) {
+function computeDistractionScore(
+  node,
+  session,
+  signals = null,
+  overrides = null,
+) {
   if (!globalThis.IRHTShared?.computeDistractionScore) {
     return {
       score: 0,
@@ -2252,9 +2275,7 @@ function ensureSessionMetrics(session) {
   session.distractionNormalized = normalizeDistractionScore(
     session.distractionAverage,
   );
-  session.distractionLabel = getDistractionLabel(
-    session.distractionNormalized,
-  );
+  session.distractionLabel = getDistractionLabel(session.distractionNormalized);
   applyIntentDrift(session, signals);
   return metrics;
 }
@@ -2320,9 +2341,7 @@ function updateSessionInsightsForNode(session, node, prevSnapshot = null) {
   session.distractionNormalized = normalizeDistractionScore(
     session.distractionAverage,
   );
-  session.distractionLabel = getDistractionLabel(
-    session.distractionNormalized,
-  );
+  session.distractionLabel = getDistractionLabel(session.distractionNormalized);
 
   const summary = buildSessionLabel(
     session,
@@ -2351,7 +2370,11 @@ function computeSessionInsights(session) {
         session.intentDriftLabel !== undefined &&
         session.intentDriftReason !== undefined &&
         session.intentDriftConfidence !== undefined;
-      if (session._insightsKey === cachedKey && session.label && hasIntentDrift) {
+      if (
+        session._insightsKey === cachedKey &&
+        session.label &&
+        hasIntentDrift
+      ) {
         return;
       }
     }
@@ -2407,9 +2430,7 @@ function computeSessionInsights(session) {
   session.distractionNormalized = normalizeDistractionScore(
     session.distractionAverage,
   );
-  session.distractionLabel = getDistractionLabel(
-    session.distractionNormalized,
-  );
+  session.distractionLabel = getDistractionLabel(session.distractionNormalized);
   session.metrics = {
     version: 1,
     totalActiveMs: totalActive,
@@ -2447,9 +2468,7 @@ function buildSessionLabel(session, nodes, categoryTotals, avgScore) {
     (signals.avgDwellMs > 0 && signals.avgDwellMs <= 45000) ||
     signals.hopRate >= 3;
   const looping = signals.revisitShare >= 0.35 && nodes.length >= 4;
-  const lateNight = isLateNight(
-    session.firstActivityAt || session.startedAt,
-  );
+  const lateNight = isLateNight(session.firstActivityAt || session.startedAt);
   const dominantCategory = pickDominantCategory(categoryTotals || {});
 
   let text = "Mixed pace";
@@ -2501,7 +2520,10 @@ function pickEarlyCategory(nodes, session) {
     (a, b) => (a.firstSeen || 0) - (b.firstSeen || 0),
   );
   const baseline =
-    session.firstActivityAt || session.startedAt || sorted[0].firstSeen || now();
+    session.firstActivityAt ||
+    session.startedAt ||
+    sorted[0].firstSeen ||
+    now();
   const cutoff = baseline + 10 * 60 * 1000;
   let earlyNodes = sorted.filter((node) => (node.firstSeen || 0) <= cutoff);
   if (earlyNodes.length < 3) {
@@ -2670,7 +2692,11 @@ function isUserIdle() {
   if (runtime.idleState && runtime.idleState !== "active") {
     return true;
   }
-  if (runtime.activeSince && runtime.windowFocused && runtime.idleState === "active") {
+  if (
+    runtime.activeSince &&
+    runtime.windowFocused &&
+    runtime.idleState === "active"
+  ) {
     return false;
   }
   if (!runtime.lastInteractionAt) {
@@ -2793,10 +2819,10 @@ function flushActiveTime(reason) {
   if (duration > 0) {
     const session = getActiveSession();
     const node = ensureNode(runtime.activeUrl, runtime.activeTitle, session);
-      const prevSnapshot = {
+    const prevSnapshot = {
       activeMs: node.activeMs || 0,
       score: node.distractionScore || 0,
-        category: node.category || "Random",
+      category: node.category || "Random",
       visitCount: node.visitCount || 0,
     };
     node.activeMs += duration;
@@ -2930,7 +2956,7 @@ async function refreshActiveTab() {
     const prevSnapshot = {
       activeMs: node.activeMs || 0,
       score: node.distractionScore || 0,
-        category: node.category || "Random",
+      category: node.category || "Random",
       visitCount: node.visitCount || 0,
     };
     node.visitCount += 1;
@@ -3704,10 +3730,10 @@ if (IS_TEST) {
     startNewSession,
     endSession,
     ensureSessionForActivity,
-      getSessionEvents,
-      getLatestEvent,
-      getNavigationCoalesceMs,
-      appendEvent,
+    getSessionEvents,
+    getLatestEvent,
+    getNavigationCoalesceMs,
+    appendEvent,
     evaluateTrapDoors,
     scheduleSessionAnalysis,
     persistState,
@@ -3804,6 +3830,7 @@ if (IS_TEST) {
     handleMessage,
     handleStorageChanged,
     handleUserActivity,
+    getSessionActiveMs,
     resetState,
     resetActiveSession,
     updateSessionSummaries,

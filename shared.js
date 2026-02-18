@@ -21,6 +21,13 @@
     }
   }
 
+  function isInternalUrl(url) {
+    if (!url || typeof url !== "string") {
+      return false;
+    }
+    return /^(chrome(-extension)?|about|edge|brave|moz-extension|extension):/i.test(url);
+  }
+
   function getDomain(url) {
     return safeHostname(url);
   }
@@ -116,6 +123,9 @@
     }
     const totals = new Map();
     Object.values(session.nodes || {}).forEach((node) => {
+      if (isInternalUrl(node.url)) {
+        return;
+      }
       const domain = getDomain(node.url);
       if (!domain) {
         return;
@@ -135,17 +145,18 @@
       .slice()
       .sort((a, b) => (a?.ts || 0) - (b?.ts || 0));
     for (const event of events) {
-      if (event?.type === "navigation" && event.toUrl) {
+      if (event?.type === "navigation" && event.toUrl && !isInternalUrl(event.toUrl)) {
         return event.toUrl;
       }
       if (
         (event?.type === "TAB_ACTIVE" || event?.type === "URL_CHANGED") &&
-        event.url
+        event.url && !isInternalUrl(event.url)
       ) {
         return event.url;
       }
     }
-    const nodes = Object.values(session.nodes || {});
+    const nodes = Object.values(session.nodes || {})
+      .filter((n) => n.url && !isInternalUrl(n.url));
     if (!nodes.length) {
       return null;
     }
@@ -642,6 +653,7 @@
     computeDistractionScore,
     computeSessionSignals,
     isTechnicalUrl,
+    isInternalUrl,
     matchesDomain,
     matchHostToList,
     resolveCategoryWithAI,
@@ -667,6 +679,7 @@
       matchesDomain,
       matchHostToList,
       isTechnicalUrl,
+      isInternalUrl,
       resolveCategoryWithAI,
       computeNormalizedEntropy,
       getMaxShare,

@@ -59,7 +59,7 @@ Internet Rabbit Hole Tracker is a Chrome extension that helps users understand h
 ## Install / Run / Test (How)
 
 - Load the extension unpacked via `chrome://extensions` (Developer mode enabled).
-- Optional AI summaries: run `npm start` or `npm run dev` to start the local Ollama proxy at `http://localhost:3010/analyze`.
+- Optional AI summaries: run `npm start` or `npm run dev` to start the local Ollama proxy at `http://localhost:3000/analyze`.
 - Tests: `npm test` runs Node's test runner with c8 coverage, enforcing 100% on background/content/popup/dashboard.
 
 ## Manifest (Extension Configuration)
@@ -69,7 +69,7 @@ Internet Rabbit Hole Tracker is a Chrome extension that helps users understand h
 - Version: 0.1.0
 - Description: Tracks active browsing time and navigation chains.
 - Permissions: `tabs`, `windows`, `storage`, `webNavigation`, `idle`, `alarms`.
-- Host permissions: `http://*/*`, `https://*/*`, and `http://localhost:3010/*` (local proxy).
+- Host permissions: `http://*/*`, `https://*/*`, and `http://localhost:3000/*` (local proxy).
 - Background service worker: `background.js`.
 - Options page: `dashboard/settings.html` (opens in tab).
 - Content script: `content.js` on `<all_urls>`, run at `document_idle`.
@@ -492,7 +492,7 @@ An internal "adaptive" action exists in popup logic but is not exposed in the se
 - uiDensity: comfortable
 - reduceMotion: false
 - sessionListLimit: 12
-- ollamaEndpoint: "http://localhost:3010/analyze"
+- ollamaEndpoint: "http://localhost:3000/analyze"
 - ollamaModel: "llama3"
 - popupLayout: stack
 - popupDensity: roomy
@@ -544,7 +544,7 @@ An internal "adaptive" action exists in popup logic but is not exposed in the se
 
 ## Ollama Proxy (Optional, Local)
 
-- Runs on port 3010 and exposes `/analyze`.
+- Runs on port 3000 and exposes `/analyze`.
 - Forwards prompts to local Ollama at `http://localhost:11434/api/generate`.
 - Uses model `llama3` by default.
 - Adds CORS headers to allow the dashboard to fetch summaries.
@@ -1057,7 +1057,7 @@ Technical settings (`dashboard/settings-technical.html`):
 - `setting-summary-cooldown` -> `summaryRefreshCooldownMinutes` -> number, clamped 0-120.
 - `setting-ollama-endpoint` -> `ollamaEndpoint` -> URL:
   - must be http/https
-  - defaults to `http://localhost:3010/analyze`.
+  - defaults to `http://localhost:3000/analyze`.
 - `setting-ollama-model` -> `ollamaModel` -> text, max 80 chars.
 - `setting-sync` -> `syncEnabled` -> boolean.
 - `setting-tracking-paused` -> `trackingPaused` -> boolean.

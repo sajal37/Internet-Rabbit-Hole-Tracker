@@ -17,7 +17,9 @@
     const trapDoor = options.trapDoor || null;
 
     const totalActiveMs = getSessionActiveMs(session, tracking);
-    const pageCount = Object.keys(session.nodes || {}).length;
+    const isInternal = options.isInternalUrl || (() => false);
+    const allNodeUrls = Object.values(session.nodes || {});
+    const pageCount = allNodeUrls.filter((n) => !isInternal(n.url)).length || allNodeUrls.length;
     const navigationCount = session.navigationCount || 0;
     const sessionStartUrl = options.sessionStartUrl || "";
     const sessionStartDomain = options.sessionStartDomain || "";
