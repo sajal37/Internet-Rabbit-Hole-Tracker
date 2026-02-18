@@ -181,7 +181,7 @@ Four organized settings pages:
 npm test
 ```
 
-Runs the full test suite using Node's built-in test runner with [c8](https://github.com/bcoe/c8) for coverage. **100% coverage is enforced** on lines, functions, branches, and statements — the build fails if any metric drops below 100%.
+Runs the full test suite using Node's built-in test runner with [c8](https://github.com/bcoe/c8) for coverage. **99% coverage is enforced** on lines, functions, branches, and statements — the build fails if any metric drops below 99%.
 
 8 test files cover all source modules. No external test framework needed.
 
